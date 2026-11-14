@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UZMA Korean BBQ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;600&family=Nanum+Brush+Script&family=Nanum+Pen+Script&display=swap">
+<style>
+  /* One dark, warm look on purpose: the page is a night-time restaurant.
+     Layout: full-bleed 3D view; caption "sign plate" bottom-left, controls bottom-right. */
+  :root {
+    --ink: #0e0b09;
+    --glass: rgba(18, 13, 10, 0.72);
+    --line: rgba(241, 231, 212, 0.16);
+    --paper: #f1e7d4;
+    --paper-ink: #2a1a10;
+    --red: #b8322b;
+    --teal: #2f8f8a;
+    --bulb: #ffc27a;
+    --muted: #b9ab93;
+    --f-display: "Black Han Sans", "Do Hyeon", "Arial Black", sans-serif;
+    --f-body: "IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --gut-l: max(16px, env(safe-area-inset-left, 0px));
+    --gut-r: max(16px, env(safe-area-inset-right, 0px));
+    --gut-b: calc(16px + env(safe-area-inset-bottom, 0px));
+    --gut-t: calc(14px + env(safe-area-inset-top, 0px));
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; background: var(--ink); color: var(--paper);
+    font-family: var(--f-body); font-size: 14px;
+    -webkit-font-smoothing: antialiased; user-select: none;
+  }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+  .ui { position: fixed; inset: 0; pointer-events: none; transition: opacity .4s ease; }
+  .ui.hidden { opacity: 0; }
+  .ui > * { pointer-events: auto; }
+
+  /* brand mark */
+  .brand {
+    position: absolute; top: var(--gut-t); left: var(--gut-l);
+    display: flex; align-items: baseline; gap: 10px;
+    text-shadow: 0 2px 12px rgba(0,0,0,.6); pointer-events: none;
+  }
+  .brand b { font-family: var(--f-display); font-weight: 400; font-size: 26px; color: var(--paper); letter-spacing: .02em; }
+  .brand span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+
+  /* key hints (top right) */
+  .hint {
+    position: absolute; top: var(--gut-t); right: var(--gut-r);
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 12px; max-width: min(560px, 70vw);
+    font-size: 12px; color: var(--muted); transition: opacity .6s ease; pointer-events: none;
+    text-shadow: 0 1px 8px rgba(0,0,0,.7);
+  }
+  .hint.faded { opacity: 0; }
+  kbd {
+    font-family: var(--f-mono); font-size: 11px; color: var(--paper);
+    border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px;
+    padding: 1px 6px; background: rgba(0,0,0,.35);
+  }
+
+  /* caption: a dark plate with a painted-sign red edge */
+  .caption {
+    position: absolute; left: var(--gut-l); bottom: var(--gut-b);
+    width: min(380px, calc(100vw - 32px)); box-sizing: border-box;
+    background: rgba(16, 11, 8, 0.8); color: var(--paper);
+    border: 1px solid var(--line); border-left: 4px solid var(--red); border-radius: 4px;
+    box-shadow: 0 14px 40px rgba(0,0,0,.45); backdrop-filter: blur(6px);
+    padding: 13px 18px 15px; display: grid; gap: 5px;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .caption.swap { opacity: 0; transform: translateY(6px); }
+  .eyebrow {
+    font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--bulb); display: flex; gap: 10px; align-items: center;
+  }
+  .eyebrow .num { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .caption h1 {
+    margin: 0; font-family: var(--f-display); font-weight: 400; font-size: clamp(22px, 2.6vw, 30px);
+    line-height: 1.08; color: var(--paper); text-wrap: balance; letter-spacing: .01em;
+  }
+  .caption p { margin: 1px 0 0; font-size: 13.5px; line-height: 1.5; max-width: 60ch; color: #d6c9b3; }
+
+  /* floor-plan room labels */
+  #labels { position: fixed; inset: 0; pointer-events: none; transition: opacity .5s ease; }
+  #labels.off { opacity: 0; }
+  #labels span {
+    position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+    font: 600 12px/1 var(--f-body); letter-spacing: .04em; color: var(--paper); white-space: nowrap;
+    background: rgba(16, 11, 8, 0.82); border: 1px solid rgba(255, 194, 122, .45); border-radius: 999px; padding: 6px 10px;
+  }
+
+  .lookpanel {
+    position: absolute; left: var(--gut-l); bottom: var(--gut-b);
+    width: min(440px, calc(100vw - 32px)); box-sizing: border-box;
+    background: var(--glass); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; display: grid; gap: 8px; backdrop-filter: blur(8px);
+  }
+  .lookpanel h2 { margin: 0; font-family: var(--f-display); font-weight: 400; font-size: 22px; color: var(--bulb); }
+  .lookpanel ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: var(--paper); }
+  .lookpanel li { display: flex; gap: 8px; align-items: baseline; }
+
+  /* controls */
+  .controls {
+    position: absolute; right: var(--gut-r); bottom: var(--gut-b);
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  }
+  .btns { display: flex; gap: 6px; background: var(--glass); border: 1px solid var(--line); border-radius: 12px; padding: 6px; backdrop-filter: blur(8px); }
+  button {
+    font: 600 13px/1 var(--f-body); color: var(--paper); background: transparent;
+    border: 1px solid transparent; border-radius: 8px; padding: 10px 12px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; min-height: 40px;
+  }
+  button:hover { background: rgba(241,231,212,.08); }
+  button:focus-visible { outline: 2px solid var(--bulb); outline-offset: 1px; }
+  button.primary { background: var(--bulb); color: var(--ink); }
+  button.primary:hover { background: #ffd39a; }
+  button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+  button svg { width: 16px; height: 16px; flex: none; }
+  button:disabled { opacity: .35; cursor: default; }
+
+  .dots { display: flex; gap: 6px; padding: 0 4px; }
+  .dots button {
+    width: 22px; height: 6px; min-height: 0; padding: 0; border-radius: 3px; background: rgba(241,231,212,.25);
+  }
+  .dots button[aria-current="true"] { background: var(--bulb); width: 34px; }
+
+  /* loader */
+  #loader {
+    position: fixed; inset: 0; background: var(--ink); display: grid; place-items: center;
+    transition: opacity .8s ease; z-index: 5;
+  }
+  #loader.done { opacity: 0; pointer-events: none; }
+  #loader .box { display: grid; gap: 14px; justify-items: center; text-align: center; padding: 0 16px; }
+  #loader .ko { font-family: var(--f-display); font-size: 64px; color: var(--paper); line-height: 1; }
+  #loader .en { font-family: var(--f-mono); letter-spacing: .3em; font-size: 12px; color: var(--muted); }
+  #loader .bar { width: 220px; height: 3px; background: rgba(241,231,212,.15); border-radius: 2px; overflow: hidden; }
+  #loader .bar i { display: block; height: 100%; width: 0; background: var(--bulb); transition: width .3s ease; }
+  #loader .msg { font-size: 13px; color: var(--muted); min-height: 1.4em; }
+  #loader button { margin-top: 6px; padding: 12px 22px; font-size: 14px; }
+
+  @media (max-width: 720px) {
+    .hint { display: none; }
+    .controls { left: var(--gut-l); right: var(--gut-r); align-items: stretch; bottom: var(--gut-b); }
+    .btns { justify-content: space-between; }
+    .btns .label { display: none; }
+    .dots { justify-content: center; }
+    .caption, .lookpanel { bottom: calc(var(--gut-b) + 96px); width: calc(100vw - 32px); }
+    .caption p { font-size: 13.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .caption, .ui, #loader, .hint { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="labels" class="off" aria-hidden="true"></div>
+<div id="fade"></div>
+
+<div class="ui" id="ui">
+  <div class="brand"><b id="brandKo">우즈마</b><span id="brandEn">UZMA · Korean BBQ</span></div>
+
+  <div class="hint" id="hint">
+    <span><kbd>Enter</kbd> next</span>
+    <span><kbd>←</kbd> back</span>
+    <span><kbd>V</kbd> look around</span>
+    <span><kbd>H</kbd> hide text</span>
+    <span><kbd>F</kbd> full screen</span>
+  </div>
+
+  <section class="caption" id="caption" aria-live="polite">
+    <div class="eyebrow"><span class="num" id="capNum">01 / 08</span><span id="capKicker">Outside</span></div>
+    <h1 id="capTitle">Welcome</h1>
+    <p id="capText"></p>
+  </section>
+
+  <section class="lookpanel" id="lookpanel" hidden>
+    <h2>Look around</h2>
+    <ul>
+      <li><kbd>drag</kbd> look around</li>
+      <li><kbd>scroll</kbd> fly forward or back</li>
+      <li><kbd>W A S D</kbd> move · <kbd>Q</kbd><kbd>E</kbd> down / up · <kbd>Shift</kbd> faster</li>
+      <li><kbd>double-click</kbd> fly to a spot · <kbd>R</kbd> roof on / off</li>
+      <li><kbd>V</kbd> or <kbd>Enter</kbd> back to the tour</li>
+    </ul>
+  </section>
+
+  <div class="controls">
+    <div class="dots" id="dots" role="tablist" aria-label="Scenes"></div>
+    <div class="btns">
+      <button id="prev" aria-label="Previous scene">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3 5 8l5 5"/></svg>
+      </button>
+      <button id="next" class="primary" aria-label="Next scene">
+        <span class="label">Next</span>
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 3 5 5-5 5"/></svg>
+      </button>
+      <button id="look" aria-pressed="false" aria-label="Look around mode">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 8s2.6-5 7-5 7 5 7 5-2.6 5-7 5-7-5-7-5Z"/><circle cx="8" cy="8" r="2.2"/></svg>
+        <span class="label">Look around</span>
+      </button>
+      <button id="full" aria-label="Full screen">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="loader">
+  <div class="box">
+    <div class="ko">우즈마</div>
+    <div class="en">UZMA · KOREAN BBQ</div>
+    <div class="bar"><i id="loadBar"></i></div>
+    <div class="msg" id="loadMsg">Lighting the grill…</div>
+    <button id="startBtn" class="primary" hidden>Start the tour</button>
+    <div class="msg" id="startHint" hidden>Then press <kbd>Enter</kbd> for each next scene</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

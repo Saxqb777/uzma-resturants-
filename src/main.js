@@ -1,0 +1,306 @@
+// Boot: renderer, post-processing, builds the restaurant, then runs the tour.
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+import { RESTAURANT, FONTS, LAYOUT, SCENES } from './config.js';
+import { buildMaterials } from './materials.js';
+import { setMaxAnisotropy, refreshSignFonts, skyTexture } from './textures.js';
+import { buildInterior } from './interior.js';
+import { buildExterior } from './exterior.js';
+import { Director } from './director.js';
+import { Spectator } from './spectator.js';
+
+const $ = (id) => document.getElementById(id);
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const params = new URLSearchParams(location.search);
+
+const loadBar = $('loadBar'), loadMsg = $('loadMsg');
+const step = async (pct, msg) => {
+  loadBar.style.width = `${pct}%`;
+  if (msg) loadMsg.textContent = msg;
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+};
+
+// ------------------------------------------------------------ renderer
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+const maxDpr = params.has('dpr') ? Number(params.get('dpr')) : 1.75;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;   // the room is static: draw shadows once
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+$('stage').appendChild(renderer.domElement);
+renderer.domElement.tabIndex = 0;
+setMaxAnisotropy(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
+
+const scene = new THREE.Scene();
+scene.background = skyTexture();
+scene.fog = new THREE.Fog('#0d1018', 22, 75);
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 160);
+
+// Dim warm reflections for the steel tables and bottles (a tiny "room" rendered into an env map)
+function makeEnvironment() {
+  const env = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.BoxGeometry(20, 8, 20), new THREE.MeshBasicMaterial({ color: '#1a120c', side: THREE.BackSide }));
+  env.add(room);
+  const warm = new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffb36b').multiplyScalar(6) });
+  for (let i = 0; i < 8; i++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), warm);
+    b.position.set(Math.cos(i * 0.8) * 6, 2.5 + (i % 2), Math.sin(i * 0.8) * 6);
+    env.add(b);
+  }
+  const cool = new THREE.Mesh(new THREE.PlaneGeometry(6, 2), new THREE.MeshBasicMaterial({ color: new THREE.Color('#dfe9ff').multiplyScalar(2), side: THREE.DoubleSide }));
+  cool.position.set(0, 3.9, -9); cool.rotation.x = Math.PI / 2; env.add(cool);
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const tex = pmrem.fromScene(env, 0.04).texture;
+  pmrem.dispose();
+  return tex;
+}
+
+// ------------------------------------------------------------ post-processing
+const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(renderer.getPixelRatio());
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.4, 1.0);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const grade = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vignette: { value: 0.42 }, grain: { value: 0.035 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float time, vignette, grain; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      vec2 d = (vUv - 0.5) * vec2(1.0, 0.82);
+      float v = smoothstep(0.78, 0.18, length(d));
+      c.rgb *= mix(1.0 - vignette, 1.0, v);
+      c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.6);          // warm grade
+      c.rgb += (h(vUv * 917.0 + fract(time) * 37.0) - 0.5) * grain;     // film grain
+      gl_FragColor = c;
+    }`,
+});
+composer.addPass(grade);
+
+// ------------------------------------------------------------ build
+const roof = new THREE.Group();
+roof.name = 'roof';
+scene.add(roof);
+const animators = [];
+const hemi = new THREE.HemisphereLight('#3a4a6a', '#1a120c', 0.55);
+
+async function build() {
+  await step(8, 'Lighting the grill…');
+  const mats = buildMaterials();
+  scene.environment = makeEnvironment();
+  await step(35, 'Setting the tables…');
+  const ctx = { scene, camera, mats, roof, animators, layout: LAYOUT, R: RESTAURANT, F: FONTS };
+  buildInterior(ctx);
+  await step(60, 'Hanging the signs…');
+  buildExterior(ctx);
+  scene.add(hemi);
+  await step(75, 'Painting the signs…');
+  await document.fonts?.ready;
+  await refreshSignFonts(6000);
+  await step(90, 'Opening the doors…');
+  renderer.compile(scene, camera);
+  renderer.shadowMap.needsUpdate = true;
+}
+
+// ------------------------------------------------------------ tour + look-around
+const ui = $('ui'), caption = $('caption'), lookpanel = $('lookpanel'), hint = $('hint');
+const btnPrev = $('prev'), btnNext = $('next'), btnLook = $('look'), btnFull = $('full');
+const dots = $('dots');
+$('brandKo').textContent = RESTAURANT.nameKo;
+$('brandEn').textContent = `${RESTAURANT.nameEn} · ${RESTAURANT.kind}`;
+
+let mode = 'tour';
+let roofOn = true;
+
+const director = new Director(camera, SCENES, {
+  fadeEl: $('fade'),
+  reducedMotion,
+  onChange: (i) => showCaption(i),
+});
+const spectator = new Spectator(camera, renderer.domElement, scene);
+
+SCENES.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.setAttribute('role', 'tab');
+  b.setAttribute('aria-label', `Scene ${i + 1}: ${s.title}`);
+  b.title = s.title;
+  b.addEventListener('click', () => { if (mode === 'look') setMode('tour'); director.go(i); b.blur(); });
+  dots.appendChild(b);
+});
+
+// Room labels for the floor-plan scene, projected from 3D each frame
+const labelsEl = $('labels');
+let labelItems = [];
+function buildLabels(s) {
+  labelsEl.textContent = '';
+  labelItems = (s.labels || []).map((l) => {
+    const el = document.createElement('span');
+    el.textContent = l.text;
+    labelsEl.appendChild(el);
+    return { el, p: new THREE.Vector3(...l.at) };
+  });
+}
+const tmpV = new THREE.Vector3();
+function updateLabels() {
+  const show = mode === 'tour' && labelItems.length > 0 && !director.anim;
+  labelsEl.classList.toggle('off', !show);
+  if (!show) return;
+  const w = window.innerWidth, h = window.innerHeight;
+  for (const it of labelItems) {
+    tmpV.copy(it.p).project(camera);
+    it.el.style.transform = `translate(${(tmpV.x * 0.5 + 0.5) * w}px, ${(-tmpV.y * 0.5 + 0.5) * h}px) translate(-50%, -50%)`;
+  }
+}
+
+let capTimer = 0;
+function showCaption(i) {
+  const s = SCENES[i];
+  const total = String(SCENES.length).padStart(2, '0');
+  [...dots.children].forEach((d, k) => d.setAttribute('aria-current', k === i ? 'true' : 'false'));
+  btnPrev.disabled = i === 0;
+  const last = i === SCENES.length - 1;
+  btnNext.querySelector('.label').textContent = last ? 'Start over' : 'Next';
+  btnNext.setAttribute('aria-label', last ? 'Start the tour over' : 'Next scene');
+  buildLabels(s);
+  caption.classList.add('swap');
+  clearTimeout(capTimer);
+  capTimer = setTimeout(() => {
+    $('capNum').textContent = `${String(i + 1).padStart(2, '0')} / ${total}`;
+    $('capKicker').textContent = s.kicker;
+    $('capTitle').textContent = s.title;
+    $('capText').textContent = s.text;
+    caption.classList.remove('swap');
+  }, reducedMotion ? 0 : 280);
+}
+
+function setMode(m) {
+  if (m === mode) return;
+  mode = m;
+  const look = m === 'look';
+  btnLook.setAttribute('aria-pressed', String(look));
+  caption.hidden = look;
+  lookpanel.hidden = !look;
+  if (look) {
+    director.anim = null;
+    $('fade').style.opacity = '0';
+    camera.up.set(0, 1, 0);
+    spectator.enable();
+    renderer.domElement.focus();
+  } else {
+    spectator.disable();
+    director.resume();
+  }
+  flashHint();
+}
+
+let hintTimer = 0;
+function flashHint() {
+  hint.classList.remove('faded');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => hint.classList.add('faded'), 7000);
+}
+
+function toggleFull() {
+  const el = document.documentElement;
+  if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {});
+  else document.exitFullscreen?.().catch(() => {});
+}
+
+btnPrev.addEventListener('click', () => { if (mode === 'look') setMode('tour'); director.prev(); btnPrev.blur(); });
+btnNext.addEventListener('click', () => {
+  if (mode === 'look') setMode('tour');
+  if (director.index === SCENES.length - 1) director.go(0); else director.next();
+  btnNext.blur();
+});
+btnLook.addEventListener('click', () => { setMode(mode === 'look' ? 'tour' : 'look'); btnLook.blur(); });
+btnFull.addEventListener('click', () => { toggleFull(); btnFull.blur(); });
+
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return;
+  if (!$('loader').classList.contains('done')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (k === 'v' || k === 'V') { setMode(mode === 'look' ? 'tour' : 'look'); return; }
+  if (k === 'h' || k === 'H') { ui.classList.toggle('hidden'); return; }
+  if (k === 'f' || k === 'F') { toggleFull(); return; }
+  if (mode === 'look') {
+    if (k === 'Enter' || k === 'Escape') setMode('tour');
+    if (k === 'r' || k === 'R') roofOn = !roofOn;
+    return;
+  }
+  if (k === 'Enter' || k === ' ' || k === 'ArrowRight' || k === 'PageDown' || k === 'ArrowDown') { e.preventDefault(); director.next(); }
+  else if (k === 'ArrowLeft' || k === 'Backspace' || k === 'PageUp' || k === 'ArrowUp') { e.preventDefault(); director.prev(); }
+  else if (k === 'Home') director.go(0);
+  else if (k === 'End') director.go(SCENES.length - 1);
+  else if (/^[1-9]$/.test(k)) director.go(Number(k) - 1);
+});
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  bloom.setSize(w, h);
+});
+
+// ------------------------------------------------------------ loop
+const clock = new THREE.Clock();
+let t = 0;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  t += dt;
+  for (const f of animators) f(t, dt);
+  if (mode === 'tour') director.update(dt);
+  else spectator.update(dt);
+  const above = camera.position.y > LAYOUT.slabTop + 3;
+  roof.visible = mode === 'tour' ? !director.cutaway : roofOn && !above;
+  hemi.intensity += ((roof.visible ? 0.55 : 1.5) - hemi.intensity) * Math.min(1, dt * 3);
+  grade.uniforms.time.value = t;
+  composer.render();
+  updateLabels();
+}
+
+// Exposed for screenshots / debugging
+window.__uzma = {
+  director, spectator, camera, scene, renderer, setMode, get mode() { return mode; },
+  pause: () => renderer.setAnimationLoop(null),
+  resume: () => renderer.setAnimationLoop(frame),
+  renderOnce: () => frame(),
+  tick: (dt) => { t += dt; for (const f of animators) f(t, dt); },
+};
+
+build().then(async () => {
+  const start = Math.max(0, Math.min(SCENES.length - 1, Number(params.get('scene') || 1) - 1));
+  director.start(start);
+  showCaption(start);
+  renderer.setAnimationLoop(frame);
+  await step(100, 'Ready');
+  const startBtn = $('startBtn');
+  startBtn.hidden = false;
+  $('startHint').hidden = false;
+  startBtn.focus();
+  const begin = () => {
+    $('loader').classList.add('done');
+    renderer.domElement.focus();
+    flashHint();
+  };
+  startBtn.addEventListener('click', begin, { once: true });
+  window.__uzma.ready = true;
+  window.__uzma.begin = begin;
+}).catch((err) => {
+  console.error(err);
+  loadMsg.textContent = 'Something went wrong while building the restaurant. Try reloading the page.';
+});
