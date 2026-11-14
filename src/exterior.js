@@ -2,7 +2,7 @@
 // vertical lightbox sign, lamps, lantern, plants, menu boards, upper floors and a bit of street.
 // Matches her reference pics: wooden/brick/tin front (pic 3) under a black tiled eave (pic 4).
 import * as THREE from 'three';
-import { box, plane, corrugatedGeometry, InstanceBatch, pointLight, spotLight, bottleGeometry } from './helpers.js';
+import { box, plane, corrugatedGeometry, InstanceBatch, pointLight, spotLight, bottleGeometry, mergeStatic } from './helpers.js';
 import * as T from './textures.js';
 import { signMaterial } from './materials.js';
 
@@ -27,6 +27,10 @@ export function buildExterior(ctx) {
   buildUpperFloors(S);
   buildStreet(S);
   buildNeighbors(S);
+
+  // fewer draw calls: merge everything that never moves (door hinge + lantern are kept separate)
+  mergeStatic(g);
+  mergeStatic(roof);
 }
 
 // ------------------------------------------------------------------
@@ -469,7 +473,7 @@ function buildLightbox({ g, mats, L, R, F, animators }) {
   animators.push((t) => {
     const f = Math.sin(t * 0.7) > 0.995 ? 0.6 + 0.4 * Math.abs(Math.sin(t * 40)) : 1;
     mat.emissiveIntensity = 1.25 * f;
-    glow.intensity = 4 * f;
+    glow.userData.level = f;
   });
 }
 
@@ -521,6 +525,7 @@ function buildLampsAndLantern({ g, mats, lm, L, R, F, animators }) {
   const bracketEnd = [wx + 0.02, 2.12, zOut + 0.42];
   rod(g, mats.blackSteel, [wx + 0.02, 2.12, zOut], bracketEnd, 0.012);
   const pivot = new THREE.Group();
+  pivot.userData.keep = true;   // it swings, so it must not be merged
   pivot.position.set(...bracketEnd);
   g.add(pivot);
   rod(pivot, mats.cord, [0, 0, 0], [0, -0.12, 0], 0.005);
@@ -539,7 +544,7 @@ function buildLampsAndLantern({ g, mats, lm, L, R, F, animators }) {
   animators.push((t) => {
     pivot.rotation.z = Math.sin(t * 1.3) * 0.05;
     pivot.rotation.x = Math.sin(t * 0.9 + 1) * 0.035;
-    lanLight.intensity = 2.5 * (0.94 + 0.06 * Math.sin(t * 7.3) * Math.sin(t * 3.1));
+    lanLight.userData.level = 0.94 + 0.06 * Math.sin(t * 7.3) * Math.sin(t * 3.1);
   });
 }
 

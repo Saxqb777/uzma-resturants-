@@ -60,16 +60,16 @@ export function corrugatedGeometry(width, length, { wave = 0.076, amp = 0.016, u
 }
 
 // Soju-style bottle profile (≈ 0.24 m tall)
-export function bottleGeometry(seg = 14) {
+export function bottleGeometry(seg = 8) {
   const p = [
-    [0.0, 0.0], [0.031, 0.0], [0.033, 0.006], [0.033, 0.135], [0.03, 0.16], [0.02, 0.19],
-    [0.0135, 0.205], [0.0125, 0.232], [0.014, 0.236], [0.014, 0.245], [0.0, 0.245],
+    [0.0, 0.0], [0.032, 0.0], [0.033, 0.135], [0.03, 0.16], [0.02, 0.19],
+    [0.0135, 0.205], [0.013, 0.236], [0.014, 0.245], [0.0, 0.245],
   ].map(([r, y]) => new THREE.Vector2(r, y));
   return new THREE.LatheGeometry(p, seg);
 }
 
 // Stainless water bottle (tall, slim)
-export function flaskGeometry(seg = 16) {
+export function flaskGeometry(seg = 12) {
   const p = [
     [0, 0], [0.04, 0], [0.042, 0.01], [0.042, 0.2], [0.036, 0.23], [0.024, 0.25], [0.024, 0.27], [0.03, 0.275], [0.03, 0.29], [0, 0.29],
   ].map(([r, y]) => new THREE.Vector2(r, y));
@@ -77,7 +77,7 @@ export function flaskGeometry(seg = 16) {
 }
 
 // Small banchan bowl
-export function bowlGeometry(r = 0.055, h = 0.035, seg = 18) {
+export function bowlGeometry(r = 0.055, h = 0.035, seg = 12) {
   const p = [[0, 0], [r * 0.6, 0], [r, h], [r * 0.93, h], [r * 0.55, 0.006], [0, 0.006]].map(([a, b]) => new THREE.Vector2(a, b));
   return new THREE.LatheGeometry(p, seg);
 }

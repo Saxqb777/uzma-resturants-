@@ -52,6 +52,19 @@ This file is the project's memory. Any new chat should read it first.
 - **Presentation logic:** `src/director.js`.
 - **Look-around camera:** `src/spectator.js`.
 
+## Performance (smoothness)
+- **Auto quality** (`src/quality.js`): watches the frame rate and lowers or raises render resolution.
+  - The bottom-bar button cycles **Auto / High / Low**. The choice is remembered per browser.
+  - `?dpr=1` in the URL forces a fixed resolution (used for screenshots).
+- **Edge smoothing:** FXAA instead of 4× MSAA, which was ~45% of every frame.
+- **Area lighting** (`src/lighting.js`): only lights near the camera are on, with a 0.6 s fade.
+  - Street: street lights + the front-window interior lights.
+  - Inside: interior lights only.
+  - Floor plan: all lights.
+- **Preloading:** textures, shaders for each lighting area, and a warm-up draw of every scene all happen on the loading screen, so nothing stutters the first time.
+- **Lighter models:** simpler bottles, bowls and bulbs (225K → 140K triangles). The outside's static parts are merged.
+- **Result:** same resolution, about half the frame time (measured in a software renderer).
+
 ## Deploying (Vercel)
 - **Project:** `korean-resturant-proj-uni` (team "saxqb777's projects"), linked to this GitHub repo.
 - **Auto-deploy is OFF** (`vercel.json` → `git.deploymentEnabled: false`).
@@ -77,3 +90,5 @@ Useful links:
   - Interior, exterior, tour + look-around.
   - Published as a private link for review.
 - **2026-11-14:** v0 deployed to Vercel at https://korean-resturant-proj-uni.vercel.app (auto-deploy off).
+- **2026-11-14:** smoothness pass (auto quality, FXAA, area lighting, preloading, lighter models).
+  - Committed, **not yet deployed**. Waiting for the user's "deploy".

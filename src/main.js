@@ -5,6 +5,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 
 import { RESTAURANT, FONTS, LAYOUT, SCENES } from './config.js';
 import { buildMaterials } from './materials.js';
@@ -13,6 +14,8 @@ import { buildInterior } from './interior.js';
 import { buildExterior } from './exterior.js';
 import { Director } from './director.js';
 import { Spectator } from './spectator.js';
+import { Quality } from './quality.js';
+import { ZoneLights } from './lighting.js';
 
 const $ = (id) => document.getElementById(id);
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -27,8 +30,8 @@ const step = async (pct, msg) => {
 
 // ------------------------------------------------------------ renderer
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-const maxDpr = params.has('dpr') ? Number(params.get('dpr')) : 1.75;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+const fixedDpr = params.has('dpr') ? Number(params.get('dpr')) : null;   // ?dpr=1 forces a resolution
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -64,13 +67,16 @@ function makeEnvironment() {
 }
 
 // ------------------------------------------------------------ post-processing
-const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+// No MSAA (it was ~45% of each frame): edges are smoothed by a cheap FXAA pass instead.
+const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { type: THREE.HalfFloatType });
 const composer = new EffectComposer(renderer, rt);
 composer.setPixelRatio(renderer.getPixelRatio());
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.4, 1.0);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
+const fxaa = new ShaderPass(FXAAShader);
+composer.addPass(fxaa);
 const grade = new ShaderPass({
   uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vignette: { value: 0.42 }, grain: { value: 0.035 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -89,12 +95,15 @@ const grade = new ShaderPass({
 });
 composer.addPass(grade);
 
+const quality = new Quality({ renderer, composer, bloom, fxaa, fixedDpr, onChange: (q) => showQuality(q) });
+
 // ------------------------------------------------------------ build
 const roof = new THREE.Group();
 roof.name = 'roof';
 scene.add(roof);
 const animators = [];
 const hemi = new THREE.HemisphereLight('#3a4a6a', '#1a120c', 0.55);
+const zones = new ZoneLights(scene, camera);
 
 async function build() {
   await step(8, 'Lighting the grill…');
@@ -109,14 +118,44 @@ async function build() {
   await step(75, 'Painting the signs…');
   await document.fonts?.ready;
   await refreshSignFonts(6000);
-  await step(90, 'Opening the doors…');
-  renderer.compile(scene, camera);
+  await step(85, 'Opening the doors…');
+  zones.tag();
+  await preload();
   renderer.shadowMap.needsUpdate = true;
+}
+
+// Do all the GPU set-up now, behind the loading screen, so the tour never stutters
+// the first time a new area comes into view.
+async function preload() {
+  // 1) upload every texture
+  const seen = new Set();
+  const upload = (v) => { if (v && v.isTexture && !seen.has(v)) { seen.add(v); renderer.initTexture(v); } };
+  scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const k of Object.keys(m)) upload(m[k]); });
+  upload(scene.background);
+  await step(90);
+  // 2) compile shaders for each lighting combination, as they are drawn (into the post-processing target)
+  renderer.setRenderTarget(composer.readBuffer);
+  for (const z of ['in', 'out', 'all']) { zones.force(z); renderer.compile(scene, camera); }
+  renderer.setRenderTarget(null);
+  await step(95);
+  // 3) draw every tour shot once (with that spot's lighting) into a tiny target,
+  //    so geometry is uploaded and every shader has actually been used once
+  const tmp = new THREE.WebGLRenderTarget(64, 36, { type: THREE.HalfFloatType });
+  renderer.setRenderTarget(tmp);
+  for (const s of SCENES) {
+    director.snapTo(s);
+    roof.visible = !s.cutaway;
+    for (const z of ['all', zones.zoneOf(camera.position)]) { zones.force(z); renderer.render(scene, camera); }
+  }
+  renderer.setRenderTarget(null);
+  tmp.dispose();
+  roof.visible = true;
+  zones.force('all');
 }
 
 // ------------------------------------------------------------ tour + look-around
 const ui = $('ui'), caption = $('caption'), lookpanel = $('lookpanel'), hint = $('hint');
-const btnPrev = $('prev'), btnNext = $('next'), btnLook = $('look'), btnFull = $('full');
+const btnPrev = $('prev'), btnNext = $('next'), btnLook = $('look'), btnFull = $('full'), btnQuality = $('quality');
 const dots = $('dots');
 $('brandKo').textContent = RESTAURANT.nameKo;
 $('brandEn').textContent = `${RESTAURANT.nameEn} · ${RESTAURANT.kind}`;
@@ -226,6 +265,12 @@ btnNext.addEventListener('click', () => {
 });
 btnLook.addEventListener('click', () => { setMode(mode === 'look' ? 'tour' : 'look'); btnLook.blur(); });
 btnFull.addEventListener('click', () => { toggleFull(); btnFull.blur(); });
+btnQuality.addEventListener('click', () => { quality.cycle(); btnQuality.blur(); });
+function showQuality(q) {
+  $('qualityLabel').textContent = q.label;
+  btnQuality.setAttribute('aria-label', `Picture quality: ${q.label}. Click to change.`);
+  btnQuality.title = { Auto: 'Quality: Auto (adjusts to keep motion smooth)', High: 'Quality: High (sharpest)', Low: 'Quality: Low (for slow laptops)', Fixed: 'Quality: fixed by the link' }[q.label];
+}
 
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return;
@@ -252,22 +297,24 @@ window.addEventListener('resize', () => {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
-  composer.setSize(w, h);
-  bloom.setSize(w, h);
+  quality.apply();
 });
 
 // ------------------------------------------------------------ loop
 const clock = new THREE.Clock();
 let t = 0;
 function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const raw = clock.getDelta();
+  const dt = Math.min(raw, 0.05);
   t += dt;
+  quality.sample(raw);
   for (const f of animators) f(t, dt);
   if (mode === 'tour') director.update(dt);
   else spectator.update(dt);
   const above = camera.position.y > LAYOUT.slabTop + 3;
   roof.visible = mode === 'tour' ? !director.cutaway : roofOn && !above;
   hemi.intensity += ((roof.visible ? 0.55 : 1.5) - hemi.intensity) * Math.min(1, dt * 3);
+  zones.update(dt);
   grade.uniforms.time.value = t;
   composer.render();
   updateLabels();
@@ -280,8 +327,10 @@ window.__uzma = {
   resume: () => renderer.setAnimationLoop(frame),
   renderOnce: () => frame(),
   tick: (dt) => { t += dt; for (const f of animators) f(t, dt); },
+  quality, zones, composer,
 };
 
+quality.apply();
 build().then(async () => {
   const start = Math.max(0, Math.min(SCENES.length - 1, Number(params.get('scene') || 1) - 1));
   director.start(start);
