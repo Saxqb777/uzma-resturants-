@@ -19,7 +19,8 @@ This file is the project's memory. Any new chat should read it first.
 
 ## Status
 - **v0 (done, waiting for her feedback):**
-  - Live link (private): https://claude.ai/artifact/7VsVhKtA44W7rnQExD1TKk
+  - Public website (Vercel): https://korean-resturant-proj-uni.vercel.app
+  - Private Claude link: https://claude.ai/artifact/7VsVhKtA44W7rnQExD1TKk
   - Preview of all 8 scenes: `docs/v0-preview.jpg`
   - The room, bar, kitchen and storefront are built.
   - 8 tour scenes, look-around mode, floor-plan view.
@@ -51,6 +52,13 @@ This file is the project's memory. Any new chat should read it first.
 - **Presentation logic:** `src/director.js`.
 - **Look-around camera:** `src/spectator.js`.
 
+## Deploying (Vercel)
+- **Project:** `korean-resturant-proj-uni` (team "saxqb777's projects"), linked to this GitHub repo.
+- **Auto-deploy is OFF** (`vercel.json` → `git.deploymentEnabled: false`).
+  - Pushing code does **not** change the live site.
+  - To update it, start a production deployment of the latest commit on purpose, only after the user says "deploy".
+- `.vercelignore` keeps `PLAN.md`, `README.md` and `docs/` off the website.
+
 ## Run locally
 Run a static file server from the repo folder. For example:
 
@@ -68,3 +76,4 @@ Useful links:
 - **2026-11-14:** v0 built.
   - Interior, exterior, tour + look-around.
   - Published as a private link for review.
+- **2026-11-14:** v0 deployed to Vercel at https://korean-resturant-proj-uni.vercel.app (auto-deploy off).
