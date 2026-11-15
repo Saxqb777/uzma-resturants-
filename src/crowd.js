@@ -12,6 +12,7 @@ import * as T from './textures.js';
 // Staff avatars are chosen by hand: modest, tidy outfits that suit a uniform apron.
 const STAFF_AVATAR = {
   cashier: 'woman-young-hoodie',
+  cashier2: 'woman-hijab-olive',
   photographer: 'woman-asian-beige-suit',
   serverAisle: 'woman-black-suit',
   waiter: 'man-asian-navy-suit',
@@ -20,17 +21,14 @@ const STAFF_AVATAR = {
   assistant1: 'man-asian-red-track',
   assistant2: 'woman-auburn-blue',
   kitchen1: 'man-cap-tracksuit',
-  kitchen2: 'woman-hijab-olive',
+  kitchen2: 'woman-brown-dress',
   kitchen3: 'man-black-denim',
 };
 
 // Hand-picked guest groups for the tables the camera looks at closely; the rest are mixed at random.
 const GROUPS = {
-  [PHOTO_TABLE]: ['woman-blonde-pink', 'man-white-kurta', 'woman-brown-dress', 'man-grey-beard-vest'],
+  [PHOTO_TABLE]: ['woman-blonde-pink', 'man-white-kurta', 'man-grey-beard-vest', 'man-older-tweed'],
   [HERO_TABLE]: ['woman-abaya-black', 'man-emirati-ghutra'],
-  'wallL-0': ['man-emirati-ghutra', 'woman-abaya-black', 'girl-hijab-green', 'boy-orange-jersey'],
-  'wallR-1': ['man-older-tweed', 'woman-asian-beige-suit', 'boy-orange-jersey'],
-  'isl1L-0': ['woman-hijab-olive', 'woman-auburn-blue', 'woman-black-suit'],
 };
 const SEAT_POSES = ['sit-eat', 'sit-eat', 'sit-talk', 'sit-eat', 'sit-cheers', 'sit-talk', 'sit-phone'];
 
@@ -57,6 +55,8 @@ export async function buildCrowd(ctx, story) {
   // ------------------------------------------------------------ staff
   const A = STAFF_AVATAR, K = KITCHEN_SPOTS, S = CASHIER.staff;
   place(A.cashier, S.x, S.z, S.ry, { pose: 'cashier', uniform: 'cashier', name: STAFF.cashier });
+  const S2 = CASHIER.staff2;
+  place(A.cashier2, S2.x, S2.z, S2.ry, { pose: 'cashier', uniform: 'cashier', name: STAFF.cashier2 });
   place(A.headChef, K.headChef.x, K.headChef.z, K.headChef.ry, { pose: K.headChef.pose, uniform: 'head-chef', name: STAFF.headChef });
   place(A.sousChef, K.sousChef.x, K.sousChef.z, K.sousChef.ry, { pose: K.sousChef.pose, uniform: 'chef', name: STAFF.sousChef });
   place(A.assistant1, K.assistant1.x, K.assistant1.z, K.assistant1.ry, { pose: K.assistant1.pose, uniform: 'cook', name: STAFF.assistant1 });
@@ -87,14 +87,18 @@ export async function buildCrowd(ctx, story) {
   const adults = guests.filter((p) => !/child/i.test(p.ageGroup || ''));
   const kids = guests.filter((p) => /child/i.test(p.ageGroup || ''));
   let lastTable = [];
+  const featured = new Set(Object.values(GROUPS).flat());   // faces at the close-up tables are kept rare elsewhere
   for (const b of BOOTHS) {
     if (!OCCUPIED.has(b.id)) continue;
     const close = b.id === HERO_TABLE || b.id === PHOTO_TABLE;
     let ids = GROUPS[b.id];
     if (!ids) {
       const n = 2 + Math.floor(r() * 3);
-      const pool = adults.filter((p) => !lastTable.includes(p.id) && !staffIds.has(p.id));
-      const pool2 = pool.length >= n ? pool : adults;
+      // prefer people who are not staff look-alikes and who were not at the previous table
+      const fresh = adults.filter((p) => !staffIds.has(p.id));
+      const base = fresh.length >= 10 ? fresh : adults;
+      const pool = base.filter((p) => !lastTable.includes(p.id) && !featured.has(p.id));
+      const pool2 = pool.length >= n ? pool : base;
       ids = [...pool2].sort(() => r() - 0.5).slice(0, n).map((p) => p.id);
       if (kids.length && r() < 0.3) ids[ids.length - 1] = kids[Math.floor(r() * kids.length)].id;
     }

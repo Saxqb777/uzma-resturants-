@@ -5,11 +5,11 @@ const KEY = 'uzma-quality';
 const MODES = ['auto', 'high', 'low'];
 
 export class Quality {
-  constructor({ renderer, composer, bloom, fxaa, fixedDpr = null, onChange }) {
+  constructor({ renderer, composer, bloom, ao, fixedDpr = null, onChange }) {
     this.renderer = renderer;
     this.composer = composer;
     this.bloom = bloom;
-    this.fxaa = fxaa;
+    this.ao = ao;
     this.onChange = onChange;
     this.max = Math.min(window.devicePixelRatio || 1, 2);
     this.min = 0.6;
@@ -50,8 +50,8 @@ export class Quality {
     this.renderer.setPixelRatio(p);
     this.composer.setPixelRatio(p);
     this.composer.setSize(w, h);
-    this.fxaa.material.uniforms.resolution.value.set(1 / (w * p), 1 / (h * p));
     this.bloom.enabled = this.mode !== 'low';
+    if (this.ao) this.ao.enabled = this.mode !== 'low';   // Low: no ambient occlusion (the costliest effect)
     this.current = p;
     this.onChange?.(this);
   }

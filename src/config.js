@@ -31,6 +31,8 @@ export const FONTS = {
   pen: '"Nanum Pen Script", cursive',
   sans: '"IBM Plex Sans KR", system-ui, sans-serif',
   arabic: '"Noto Kufi Arabic", "IBM Plex Sans Arabic", sans-serif',
+  brand: '"Lilita One", "Fredoka", sans-serif',          // the Seoulicious wordmark (Latin): bold, friendly, vibrant
+  brandAr: '"Lalezar", "Noto Kufi Arabic", sans-serif',   // matching Arabic wordmark face
   neon: '"Pacifico", "Yellowtail", cursive',              // neon script
   cute: '"Jua", "Fredoka", sans-serif',                   // rounded, for menus and the cashier corner
   round: '"Fredoka", "Jua", sans-serif',
@@ -116,7 +118,7 @@ export const SCENES = [
     id: 'booths', zone: 'in', kicker: 'Inside',
     title: 'The Booths',
     text: '30 cosy booths for four, a grill in every table, soft cushions and armrests for long, happy dinners.',
-    cam: [-0.3, 2.1, -4.6], look: [-6.4, 1.0, -10.5], fov: 56,
+    cam: [-0.4, 2.15, -5.55], look: [-6.6, 0.9, -11.4], fov: 58,
     drift: [-0.1, 0.05, -0.6],
   },
   {
@@ -130,7 +132,7 @@ export const SCENES = [
     id: 'cashier', zone: 'in', kicker: 'Pay & polaroids',
     title: 'The Cashier Corner',
     text: 'Pay with a smile, grab a menu, and meet our Seoulicious family on the polaroid wall.',
-    cam: [2.0, 1.7, -0.9], look: [6.6, 1.55, -3.1], fov: 58,
+    cam: [3.0, 1.65, -1.25], look: [6.9, 1.45, -3.25], fov: 56,
     drift: [0.15, 0, -0.3],
   },
   {
@@ -144,14 +146,14 @@ export const SCENES = [
     id: 'pin', zone: 'in', kicker: 'Our wall', story: 'pin',
     title: 'Onto the Polaroid Wall',
     text: 'Every polaroid joins the wall of happy customers who have eaten with us.',
-    cam: [4.9, 1.75, -1.3], look: [7.4, 1.75, -2.7], fov: 50,
+    cam: [6.0, 1.7, -0.95], look: [7.42, 1.58, -2.2], fov: 50,
     drift: [0.08, 0, -0.1],
   },
   {
     id: 'live', zone: 'in', kicker: 'Back of house',
     title: 'Live Cooking Station',
     text: 'Our chefs cook fresh in front of you, and waiters pick up every dish right here.',
-    cam: [-0.4, 1.65, -16.95], look: [0, 1.6, -20.5], fov: 64,
+    cam: [0, 1.72, -15.0], look: [0.1, 1.72, -20], fov: 56,
     drift: [0.12, 0, -0.2],
   },
   {
@@ -159,7 +161,7 @@ export const SCENES = [
     title: 'The Main Kitchen',
     text: 'Spotless and bright: everything is prepared on site, from fresh vegetables to marinated chicken.',
     cam: [0, 1.75, -22.35], look: [0.25, 1.1, -26], fov: 68,
-    via: [-0.45, 1.6, -20.2],
+    via: [-0.5, 1.58, -19.6],
     drift: [0.15, 0, -0.2],
   },
   {
@@ -218,4 +220,5 @@ export const STAFF = {
   kitchen1: '지호 Jiho',
   kitchen2: '수아 Sua',
   kitchen3: '은우 Eunwoo',
+  cashier2: '유나 Yuna',
 };

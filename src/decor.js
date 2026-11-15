@@ -115,9 +115,6 @@ function neon(parent, tex, w, h, x, y, z, ry, strength = 2.4) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
   m.position.set(x, y, z); m.rotation.y = ry; m.userData.keep = true; m.renderOrder = 2;
   parent.add(m);
-  // clear acrylic backer like real LED neon
-  const back = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.96, h * 0.9), new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.08, roughness: 0.1 }));
-  back.position.set(x, y, z); back.rotation.y = ry; back.translateZ(-0.01); back.userData.keep = true; parent.add(back);
   return m;
 }
 

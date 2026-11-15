@@ -3,7 +3,7 @@
 // Right-drag = slide · Double-click = fly to that spot · Touch: drag to look, pinch to fly.
 import * as THREE from 'three';
 
-const BOUNDS = { x: [-24, 24], y: [0.35, 40], z: [-24, 26] };
+const BOUNDS = { x: [-26, 26], y: [0.35, 45], z: [-32, 26] };
 
 export class Spectator {
   constructor(camera, dom, scene) {

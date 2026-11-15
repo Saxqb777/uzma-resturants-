@@ -16,6 +16,7 @@ export async function loadFoodTextures() {
   await Promise.all([
     ...NAMES.map((n) => load(n, `assets/ai/food/${n}.jpg`)),
     load('hero-polaroid', 'assets/ai/hero/01.jpg'),
+    load('hero-polaroid-2', 'assets/ai/hero/02.jpg'),
   ]);
 }
 export function foodTexture(name) { return textures[name] || null; }

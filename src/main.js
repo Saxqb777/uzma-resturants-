@@ -5,7 +5,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 import { RESTAURANT, FONTS, LAYOUT, SCENES } from './config.js';
 import { buildMaterials } from './materials.js';
@@ -79,11 +80,37 @@ const rt = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, { 
 const composer = new EffectComposer(renderer, rt);
 composer.setPixelRatio(renderer.getPixelRatio());
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.4, 0.4, 1.0);
+
+// Ambient occlusion: soft contact shadows where things meet (under tables, benches, people, in corners).
+// It grounds everything in the room. Runs at reduced resolution; off in Low quality.
+const AO_SCALE = 0.6;
+const ao = new GTAOPass(scene, camera, 4, 4);
+ao.blendIntensity = 1.0;
+ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 1.3, scale: 1.25, samples: 12, screenSpaceRadius: false });
+ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusExponent: 1.3, rings: 2, samples: 12 });
+{
+  const setSize = ao.setSize.bind(ao);
+  ao.setSize = (w, h) => setSize(Math.max(2, Math.round(w * AO_SCALE)), Math.max(2, Math.round(h * AO_SCALE)));
+  // see-through things (glass, leaves, hair cards, neon) must not write the AO depth, or they leave dark halos
+  ao.overrideVisibility = function () {
+    const cache = this._visibilityCache;
+    this.scene.traverse((o) => {
+      cache.set(o, o.visible);
+      if (o.isPoints || o.isLine) { o.visible = false; return; }
+      if (o.isMesh) {
+        const m = Array.isArray(o.material) ? o.material[0] : o.material;
+        if (m && (m.transparent || m.alphaTest > 0)) o.visible = false;
+      }
+    });
+  };
+}
+composer.addPass(ao);
+
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.34, 0.4, 1.05);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
-const fxaa = new ShaderPass(FXAAShader);
-composer.addPass(fxaa);
+const smaa = new SMAAPass(window.innerWidth, window.innerHeight);   // sharper edges than FXAA, text stays crisp
+composer.addPass(smaa);
 const grade = new ShaderPass({
   uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vignette: { value: 0.42 }, grain: { value: 0.035 }, warmth: { value: 0.6 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
@@ -102,7 +129,7 @@ const grade = new ShaderPass({
 });
 composer.addPass(grade);
 
-const quality = new Quality({ renderer, composer, bloom, fxaa, fixedDpr, onChange: (q) => showQuality(q) });
+const quality = new Quality({ renderer, composer, bloom, ao, fixedDpr, onChange: (q) => showQuality(q) });
 
 // ------------------------------------------------------------ build
 const roof = new THREE.Group();
@@ -114,7 +141,7 @@ const HEMI = {
   in: { i: 1.15, sky: new THREE.Color('#ffe0c0'), ground: new THREE.Color('#5a3e2c') },
   out: { i: 0.6, sky: new THREE.Color('#4a5878'), ground: new THREE.Color('#2a1c14') },
   top: { i: 1.8, sky: new THREE.Color('#fff0dc'), ground: new THREE.Color('#6a5040') },
-  kitchen: { i: 1.35, sky: new THREE.Color('#f4f8ff'), ground: new THREE.Color('#c9d0d6') },
+  kitchen: { i: 0.75, sky: new THREE.Color('#f4f8ff'), ground: new THREE.Color('#aab2b8') },
 };
 const zones = new ZoneLights(scene, camera);
 
@@ -372,7 +399,7 @@ window.__uzma = {
   resume: () => renderer.setAnimationLoop(frame),
   renderOnce: () => frame(),
   tick: (dt) => { t += dt; for (const f of animators) f(t, dt); },
-  quality, zones, composer,
+  quality, zones, composer, ao, bloom,
   settle: (on = true) => { snapLook = on; },
 };
 

@@ -23,7 +23,7 @@ const PLACEMENTS = [
   P('payphone_kr', L.x0 + 0.02, 1.15, -4.45, Math.PI / 2, 1, { back: true }),
   // --- plants at the front of every booth lane (the aisle entrances)
   P('plant_calathea_pot', -4.55, 0, -4.6, 0.3),
-  P('plant_calathea_pot', 4.55, 0, -4.6, 2.2),
+  P('plant_calathea_pot', 3.75, 0, -4.62, 2.2),
   P('plant_heartleaf', -0.7, 0, -4.55, 0.9, 0.8),
   P('plant_heartleaf', 0.7, 0, -4.55, 2.4, 0.8),
   // --- hanging ferns over the wall lanes and the front zone

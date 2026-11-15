@@ -14,10 +14,12 @@ const PINK = '#f2a7c3', PINK2 = '#e889ab', TEAL = '#5fc2b8', TEAL2 = '#2f8f8a', 
 // Where things are (shared with the people/story code)
 export const CASHIER = {
   counter: { x0: 5.35, x1: 5.95, z0: -1.8, z1: -4.3, top: 1.05 },
-  staff: { x: 6.42, z: -3.05, ry: -Math.PI / 2 },             // cashier stands here, facing the customers (-x)
+  staff: { x: 6.42, z: -2.55, ry: -Math.PI / 2 },             // cashier 1 stands here, facing the customers (-x)
+  staff2: { x: 6.42, z: -3.65, ry: -Math.PI / 2 },            // cashier 2
+  registers: [-2.55, -3.65],
   board: { x: 7.49, z0: -1.9, z1: -4.45, y0: 1.05, y1: 3.05 }, // cork polaroid board on the right wall
-  pinSpot: { x: 7.45, y: 1.66, z: -2.45 },                    // empty spot where the new polaroid goes
-  pinStand: { x: 7.08, z: -2.45, ry: Math.PI / 2 },            // where the photographer stands to pin it
+  pinSpot: { x: 7.45, y: 1.66, z: -2.12 },                    // empty spot where the new polaroid goes
+  pinStand: { x: 7.08, z: -2.12, ry: Math.PI / 2 },            // where the photographer stands to pin it
   nook: { x: 5.3, z: -0.85 },
 };
 
@@ -183,27 +185,28 @@ export function buildCashier(ctx) {
   box(g, M.woodDarkV, 0.14, 2.62, 0.14, 5.2, 0, -1.62);   // front corner post (rises out of the planter)
   vines(g, 5.2, -4.55, 0.12, 0.2, L.ceil - 0.2, 260, 11);
 
-  // ---- things on the counter
+  // ---- things on the counter: two registers, each with a card machine, and cute bits in between
   const top = C.top;
-  pos(g, M, 5.62, top, -3.05, F);                                      // register
-  rb(g, std('#2b2d33', { roughness: 0.4 }), 0.09, 0.03, 0.16, 5.5, top, -3.55, 0.01);   // card machine
-  card(g, qrTexture(F), 0.12, 0.17, 5.42, top + 0.1, -2.62, -Math.PI / 2 + 0.25);       // QR pay stand
-  box(g, std('#d9eef0', { transparent: true, opacity: 0.4 }), 0.02, 0.18, 0.13, 5.44, top, -2.62, { cast: false, receive: false });
-  card(g, wifiTexture(F), 0.14, 0.1, 5.42, top + 0.06, -2.3, -Math.PI / 2 + 0.2);       // Free WiFi
-  card(g, polaroidPriceTexture(F), 0.16, 0.2, 5.43, top + 0.11, -3.95, -Math.PI / 2 - 0.2, 0.2);  // Polaroid AED 5
-  donationBox(g, 5.55, top, -4.15, F);
-  // cute accessories
-  plush(g, 'bunny', 5.78, top, -2.0, -Math.PI / 2 - 0.4);
-  plush(g, 'bear', 5.8, top, -4.18, -Math.PI / 2 + 0.3);
-  for (const [x, z, col] of [[5.6, -2.45, '#f6c9d8'], [5.75, -3.45, '#bfe7e2'], [5.5, -3.75, '#f8e3b5']]) succulent(g, x, top, z, col);
-  candyJar(g, 5.75, top, -2.6);
-  sphere(g, std('#d8b45a', { metalness: 0.9, roughness: 0.3 }), 0.035, 5.5, top + 0.03, -2.0, 1, 0.8, 1);  // service bell
-  instax(g, 5.62, top, -3.6);
-  menuStack(g, 5.48, top, -1.95, F);
-  card(g, thanksTexture(F), 0.2, 0.08, 5.33, top + 0.045, -3.05, -Math.PI / 2, 0.15);   // "thank you" strip on the counter edge
+  for (const rz of CASHIER.registers) {
+    pos(g, M, 5.62, top, rz, F);
+    rb(g, std('#2b2d33', { roughness: 0.4 }), 0.09, 0.03, 0.16, 5.47, top, rz - 0.3, 0.01);        // card machine
+  }
+  menuStack(g, 5.5, top, -1.98, F);
+  plush(g, 'bunny', 5.82, top, -1.98, -Math.PI / 2 - 0.4);
+  sphere(g, std('#d8b45a', { metalness: 0.9, roughness: 0.3 }), 0.035, 5.45, top + 0.03, -2.2, 1, 0.8, 1);  // service bell
+  card(g, qrTexture(F), 0.12, 0.17, 5.42, top + 0.1, -3.02, -Math.PI / 2 + 0.2);                  // QR pay stand
+  box(g, std('#d9eef0', { transparent: true, opacity: 0.4 }), 0.02, 0.18, 0.13, 5.44, top, -3.02, { cast: false, receive: false });
+  card(g, wifiTexture(F), 0.14, 0.1, 5.42, top + 0.06, -3.22, -Math.PI / 2 - 0.15);               // Free WiFi
+  instax(g, 5.64, top, -3.1);
+  candyJar(g, 5.84, top, -3.12);
+  card(g, polaroidPriceTexture(F), 0.16, 0.2, 5.43, top + 0.11, -4.05, -Math.PI / 2 - 0.2, 0.2);  // Polaroid AED 5
+  donationBox(g, 5.58, top, -4.2, F);
+  plush(g, 'bear', 5.84, top, -4.15, -Math.PI / 2 + 0.3);
+  for (const [x, z, col] of [[5.84, -2.22, '#f6c9d8'], [5.84, -2.86, '#bfe7e2'], [5.84, -3.4, '#f8e3b5']]) succulent(g, x, top, z, col);
+  card(g, thanksTexture(F), 0.2, 0.08, 5.33, top + 0.045, -3.1, -Math.PI / 2, 0.15);              // "thank you" strip on the counter edge
 
   // ---- cute menu easel where the queue forms
-  menuEasel(g, M, 4.35, -1.5, -Math.PI / 2 + 0.55, F);
+  menuEasel(g, M, 4.5, -4.72, -0.55, F);
   // pink/teal round rug in front of the counter
   const rug = new THREE.Mesh(new THREE.CircleGeometry(1.0, 40), new THREE.MeshStandardMaterial({ map: rugTexture(), roughness: 0.95 }));
   rug.rotation.x = -Math.PI / 2; rug.position.set(4.5, 0.004, -3.05); rug.receiveShadow = true; g.add(rug);
@@ -295,18 +298,19 @@ function vines(g, x, z, r0, y0, y1, n, seed) {
 }
 export { vines };
 
+let posScreen = null;
 function pos(g, M, x, y, z, F) {
   rb(g, std('#fdf7f9', { roughness: 0.35 }), 0.24, 0.07, 0.3, x, y, z, 0.02);          // base, cream-white
   rb(g, std(PINK, { roughness: 0.4 }), 0.05, 0.12, 0.06, x + 0.02, y + 0.07, z, 0.01);  // neck
   const screen = new THREE.Mesh(new RoundedBoxGeometry(0.03, 0.22, 0.3, 2, 0.012), [std(PINK), std(PINK), std(PINK), std(PINK), std(PINK), std(PINK)]);
   screen.position.set(x - 0.01, y + 0.27, z); screen.rotation.z = -0.32; g.add(screen);
-  const ui = T.sign({ w: 384, h: 288, bg: '#fff7fb', border: null, aged: 0, fonts: [{ font: F.round, text: 'Seoulicious POS Meal Deal Bulgogi Bibimbap Iced Tea Polaroid Rice Total AED 64.00' }], draw: (c, w, h) => {
+  const ui = posScreen || (posScreen = T.sign({ w: 384, h: 288, bg: '#fff7fb', border: null, aged: 0, fonts: [{ font: F.round, text: 'Seoulicious POS Meal Deal Bulgogi Bibimbap Iced Tea Polaroid Rice Total AED 64.00' }], draw: (c, w, h) => {
     c.fillStyle = '#f6c3d6'; c.fillRect(0, 0, w, 40);
     c.fillStyle = '#ffffff'; c.font = `26px ${F.round}`; c.fillText('Seoulicious  POS', 14, 28);
     const tiles = [['Meal Deal', '#f2a7c3'], ['Bulgogi', '#9fd9d2'], ['Bibimbap', '#f8d98a'], ['Iced Tea', '#c9b6ef'], ['Polaroid', '#ffc4a8'], ['Rice', '#d6eec7']];
     tiles.forEach(([t, col], i) => { const tx = 12 + (i % 3) * 120, ty = 54 + Math.floor(i / 3) * 86; c.fillStyle = col; c.beginPath(); c.roundRect(tx, ty, 110, 76, 12); c.fill(); c.fillStyle = '#3b2a33'; c.font = `20px ${F.round}`; c.fillText(t, tx + 10, ty + 44); });
     c.fillStyle = '#2f8f8a'; c.beginPath(); c.roundRect(12, 230, 360, 46, 12); c.fill(); c.fillStyle = '#fff'; c.font = `24px ${F.round}`; c.fillText('Total  AED 64.00', 24, 262);
-  } });
+  } }));
   const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.27, 0.2), new THREE.MeshStandardMaterial({ map: ui, emissive: '#ffffff', emissiveMap: ui, emissiveIntensity: 0.55, roughness: 0.25 }));
   scr.position.set(x - 0.027, y + 0.27, z); scr.rotation.set(0, -Math.PI / 2, 0); scr.rotateX(-0.32); g.add(scr);
 }

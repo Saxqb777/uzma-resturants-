@@ -363,7 +363,7 @@ function tables(g, M, B, food, rnd) {
       if (rnd() < 0.5) for (const s of [-1, 1]) food.riceClosed(g, x - 0.05, Y, z + s * 0.27);
     }
 
-    if (b.id === HERO_TABLE) heroPolaroid(g, x + 0.13, Y + 0.002, z + 0.31);
+    if (b.id === HERO_TABLE) { heroPolaroid(g, x - 0.53, Y + 0.002, z + 0.2, 0.3, 'hero-polaroid'); heroPolaroid(g, x - 0.47, Y + 0.0035, z + 0.09, -0.25, 'hero-polaroid-2'); }
 
     // bare warm bulb over every table
     const top = b.lane.startsWith('isl') ? 3.05 : 3.0;
@@ -371,9 +371,9 @@ function tables(g, M, B, food, rnd) {
   }
 }
 
-function heroPolaroid(g, x, y, z) {
-  const tex = foodTexture('hero-polaroid');
-  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.set(-Math.PI / 2, 0, 0.35); g.add(grp);
+function heroPolaroid(g, x, y, z, rot, key) {
+  const tex = foodTexture(key);
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.set(-Math.PI / 2, 0, rot + Math.PI / 2); g.add(grp);
   const frame = new THREE.Mesh(new THREE.PlaneGeometry(0.088, 0.107), new THREE.MeshStandardMaterial({ color: '#fbfaf5', roughness: 0.45 }));
   frame.receiveShadow = true; grp.add(frame);
   if (tex) {
@@ -387,11 +387,11 @@ function heroPolaroid(g, x, y, z) {
 function lights(g) {
   const warm = '#ffb877', warm2 = '#ffc690';
   // dining room: two rows of lights over each lane pair
-  for (const x of [-5.6, -2.5, 2.5, 5.6]) for (const z of [-7.2, -14.0]) pointLight(g, warm, 9, 9.5, x, 2.35, z);
+  // dining room: one light between each wall lane and island, three along the room (6 total)
+  for (const x of [-4.2, 4.2]) for (const z of [-6.9, -10.75, -14.6]) pointLight(g, warm, 13, 10.5, x, 2.45, z);
   // front zone
-  pointLight(g, warm2, 7, 8, -5.2, 2.6, -2.4);     // photo spot
-  pointLight(g, warm2, 6, 8, 0, 2.9, -1.8);        // entrance
-  pointLight(g, '#ffd8c0', 7, 8, 5.2, 2.6, -2.4);  // cashier
+  pointLight(g, warm2, 9, 9, -4.2, 2.7, -2.3);     // photo spot + entrance
+  pointLight(g, '#ffd8c0', 9, 9, 4.2, 2.7, -2.3);  // cashier + entrance
   // centre aisle, front and back (these two cast the static shadows)
   spotLight(g, '#ffd6a8', 30, 14, [0, 4.1, -5.5], [0, 0, -8.5], { angle: 0.8, penumbra: 0.85, shadow: true });
   spotLight(g, '#ffd6a8', 26, 14, [0, 4.1, -12.5], [0, 0, -15], { angle: 0.8, penumbra: 0.85, shadow: true });

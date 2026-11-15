@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Fredoka:wght@400;600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;600&family=Jua&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Kufi+Arabic:wght@500;800&family=Pacifico&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Fredoka:wght@400;600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;600&family=Jua&family=Lalezar&family=Lilita+One&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Kufi+Arabic:wght@500;800&family=Pacifico&display=swap">
 <style>
   /* One dark, warm look on purpose: the page is a night-time restaurant.
      Layout: full-bleed 3D view; caption "sign plate" bottom-left, controls bottom-right. */
@@ -21,7 +21,7 @@
     --teal: #2f8f8a;
     --bulb: #ffc27a;
     --muted: #b9ab93;
-    --f-display: "Black Han Sans", "Do Hyeon", "Arial Black", sans-serif;
+    --f-display: "Lilita One", "Black Han Sans", "Arial Black", sans-serif;
     --f-body: "IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
     --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
     --gut-l: max(16px, env(safe-area-inset-left, 0px));
@@ -52,7 +52,7 @@
     display: flex; align-items: baseline; gap: 10px;
     text-shadow: 0 2px 12px rgba(0,0,0,.6); pointer-events: none;
   }
-  .brand b { font-family: var(--f-display); font-weight: 400; font-size: 26px; color: var(--paper); letter-spacing: .02em; }
+  .brand b { font-family: var(--f-display); font-weight: 400; font-size: 28px; color: #ff6f61; letter-spacing: .01em; text-shadow: 0 0 18px rgba(255, 79, 139, .55), 0 2px 10px rgba(0,0,0,.6); }
   .brand span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
 
   /* key hints (top right) */
@@ -142,7 +142,7 @@
   }
   #loader.done { opacity: 0; pointer-events: none; }
   #loader .box { display: grid; gap: 14px; justify-items: center; text-align: center; padding: 0 16px; }
-  #loader .ko { font-family: var(--f-display); font-size: 64px; color: var(--paper); line-height: 1; }
+  #loader .ko { font-family: var(--f-display); font-size: 68px; color: #ff6f61; line-height: 1; text-shadow: 0 0 34px rgba(255, 79, 139, .5); }
   #loader .en { font-family: var(--f-mono); letter-spacing: .3em; font-size: 12px; color: var(--muted); }
   #loader .bar { width: 220px; height: 3px; background: rgba(241,231,212,.15); border-radius: 2px; overflow: hidden; }
   #loader .bar i { display: block; height: 100%; width: 0; background: var(--bulb); transition: width .3s ease; }

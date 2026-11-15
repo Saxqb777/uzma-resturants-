@@ -54,7 +54,7 @@ export function buildKitchen(ctx) {
     pm.dispose();
   }
   if (env) {
-    const brighten = (m, rough = 1) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 1.0; c.roughness *= rough; return c; };
+    const brighten = (m, rough = 1) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 0.6; c.roughness *= rough; return c; };
     M = { ...M, steelBrushed: brighten(M.steelBrushed, 1.35), steel: brighten(M.steel, 1.2), whiteTile: brighten(M.whiteTile || M.kitchenTile), kitchenFloor: brighten(M.kitchenFloor || M.kitchenTile) };
   }
   const food = makeFoodKit(M);
@@ -270,10 +270,10 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   for (const x of [-0.9, 0.0, 0.9]) tray(g, x, K.pass.y0 + 0.05, L.kitchenZ - 0.12, food, rnd);
 
   // bright, clean white light (ceiling panels in the roof group, real lights stay)
-  const panel = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#f2f7ff', emissiveIntensity: 3.2 });
+  const panel = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#f2f7ff', emissiveIntensity: 1.6 });
   for (const x of [-4.2, -1.4, 1.4, 4.2]) for (const z of [-22.6, -25.3]) box(roof, panel, 1.2, 0.03, 0.6, x, L.ceil - 0.04, z, { cast: false, receive: false });
-  pointLight(g, '#f6f9ff', 16, 10, -3.2, 3.7, -24.0);
-  pointLight(g, '#f6f9ff', 16, 10, 3.2, 3.7, -24.0);
+  pointLight(g, '#f6f9ff', 7.5, 11, -3.2, 3.6, -24.0);
+  pointLight(g, '#f6f9ff', 7.5, 11, 3.2, 3.6, -24.0);
 }
 
 function faucet(g, M, x, z) {

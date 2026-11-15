@@ -307,6 +307,7 @@ export function signDesigns(R, F) {
   const deal = MEAL_DEAL;
   return {
     billboard: billboardDesign(R, F),
+    billboardGlow: billboardDesign(R, F, true),
     lightbox: lightboxDesign(R, F),
     offer: offerDesign(R, F, deal),
     chalk: chalkDesign(R, F, deal),
@@ -333,100 +334,176 @@ function dealParts(R, deal) {
   return { kicker: kicker.toUpperCase(), line1: line1.toUpperCase(), line2: line2.toUpperCase(), cur: pm[1], amount: pm[2], extra, extraPrice };
 }
 
-// --- big painted billboard: English name left, Arabic name right (as Abu Dhabi signs do), round
-//     "KOREAN BBQ" badge in the middle. Retro sign-painter look: cream panel fading up into a painted
-//     sky, red letters with a cream outline and a dark drop shade, teal/red pinstripes.
-function billboardDesign(R, F) {
+// ---------- the Seoulicious wordmark: illuminated channel letters ----------
+// Brand palette (matches the pink / teal / yellow inside the restaurant)
+const BRAND = {
+  teal: '#17595a', tealDeep: '#0d3a3c', tealNeon: '#5fc2b8', pink: '#ff4f8b', pinkSoft: '#f2a7c3', yellow: '#ffd35c',
+  en: [[0, '#ffc54d'], [0.42, '#ff7d3a'], [1, '#ff2f50']],          // hot orange -> coral red
+  ar: [[0, '#ff7fae'], [0.45, '#ff4f8b'], [1, '#ff7a52']],          // hot pink -> coral
+  gold: [[0, '#fff3b8'], [0.55, '#ffd35c'], [1, '#ffb23a']],
+};
+const brandFont = (F) => F.brand || F.display;
+const brandFontAr = (F) => F.brandAr || F.arabic;
+
+// One word as a lit channel letter: warm halo, dark returns (depth), gradient face with a white rim
+// highlight along the top-left edges, crisp trim. `lit` = draw only what emits light (for the emissive map).
+function glowWord(c, text, x, y, o) {
+  const W = c.canvas.width, H = c.canvas.height;
+  c.save();
+  c.direction = o.rtl ? 'rtl' : 'ltr';
+  c.textAlign = 'center';
+  c.textBaseline = 'alphabetic';
+  const { m, size, spacing } = fitFont(c, text, o);
+  const by = y + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+  const bx = x + spacing / 2;
+  const top = by - m.actualBoundingBoxAscent, bot = by + m.actualBoundingBoxDescent;
+  const k = size / 100;
+  // halo
+  c.fillStyle = o.glow; c.shadowColor = o.glow;
+  c.shadowBlur = (o.halo ?? 0.34) * size; c.globalAlpha = o.lit ? 0.95 : 0.8; c.fillText(text, bx, by);
+  c.shadowBlur = (o.halo ?? 0.34) * size * 0.35; c.globalAlpha = 1; c.fillText(text, bx, by);
+  c.shadowColor = 'transparent'; c.shadowBlur = 0;
+  // returns (the letter sides): never lit
+  const depth = o.depth ?? 8;
+  c.fillStyle = o.lit ? '#000000' : (o.edge || '#4a0d14');
+  for (let i = depth; i >= 1; i--) c.fillText(text, bx + i * 0.45 * k, by + i * 0.8 * k);
+  // face on its own layer (same transform), rim first, gradient offset down-right on top of it
+  const [lc, l] = T.makeCanvas(W, H);
+  l.setTransform(c.getTransform());
+  l.font = c.font; l.letterSpacing = c.letterSpacing; l.direction = c.direction; l.textAlign = 'center'; l.textBaseline = 'alphabetic';
+  l.fillStyle = o.rim || '#fff6ea'; l.fillText(text, bx, by);
+  l.globalCompositeOperation = 'source-atop';
+  const gr = l.createLinearGradient(0, top, 0, bot);
+  for (const [t, col] of o.stops) gr.addColorStop(t, col);
+  l.fillStyle = gr; l.fillText(text, bx + 2.0 * k, by + 3.0 * k);
+  // soft sheen over the upper half of the face
+  const sh = l.createLinearGradient(0, top, 0, top + (bot - top) * 0.55);
+  sh.addColorStop(0, 'rgba(255,255,255,0.28)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+  l.fillStyle = sh; l.fillRect(-W, top, W * 3, (bot - top) * 0.55);
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(lc, 0, 0); c.restore();
+  // trim cap
+  if (!o.lit) { c.lineJoin = 'round'; c.lineWidth = 1.4 * k; c.strokeStyle = o.trim || 'rgba(90,10,20,0.55)'; c.strokeText(text, bx, by); }
+  c.restore();
+  return { m, size };
+}
+
+// Neon tube along a path (glow, coloured tube, hot core). `clips` adds the little stand-off clips.
+function neonPath(c, path, color, core, width, { lit = false, clips = 0 } = {}) {
+  c.save();
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  c.strokeStyle = color; c.shadowColor = color;
+  c.shadowBlur = width * 3.2; c.lineWidth = width; path(); c.stroke();
+  c.shadowBlur = width * 1.2; path(); c.stroke();
+  c.shadowColor = 'transparent'; c.shadowBlur = 0;
+  c.strokeStyle = core; c.lineWidth = width * 0.38; path(); c.stroke();
+  c.restore();
+  if (clips && !lit) {
+    c.save(); c.fillStyle = 'rgba(20,20,20,0.85)';
+    for (const [x, y] of clips) { c.fillRect(x - width * 0.55, y - width * 0.9, width * 1.1, width * 1.8); }
+    c.restore();
+  }
+}
+
+// --- billboard: deep teal panel board with illuminated channel letters. English left, Arabic right
+//     (as Abu Dhabi signs do), glowing yellow KOREAN BBQ roundel in the middle, pink + teal neon border.
+//     `lit` = the emissive layer (only what glows), used as the material's emissiveMap.
+function billboardDesign(R, F, lit = false) {
   const w = 4096, h = 400;
   const kind = R.kind.toUpperCase().split(' ');
   return {
-    w, h, bg: '#efe4cb', border: null, aged: 0.4, seed: 61, lines: [],
-    fonts: [{ font: F.display, text: `${R.name}${R.kind.toUpperCase()}` }, { font: F.arabic, weight: 800, text: R.nameAr }],
+    w, h, bg: lit ? '#000000' : BRAND.tealDeep, border: null, aged: lit ? 0 : 0.18, seed: lit ? 64 : 61, lines: [],
+    fonts: [
+      { font: brandFont(F), text: `${R.name}${R.kind.toUpperCase()}` },
+      { font: brandFontAr(F), text: R.nameAr },
+    ],
     draw: (c) => {
-      const gr = c.createLinearGradient(0, 0, 0, h);
-      gr.addColorStop(0, '#9fc5cf'); gr.addColorStop(0.5, '#dbe3d6'); gr.addColorStop(0.85, '#efe4cb'); gr.addColorStop(1, '#efe4cb');
-      c.fillStyle = gr; c.fillRect(0, 0, w, h);
-      // a few soft painted clouds high up, away from the lettering
-      const r = T.rng(62);
-      c.fillStyle = 'rgba(255,255,255,0.42)';
-      for (const cx of [180, 1330, 1960, 2780, 3900]) {
-        for (let k = 0; k < 4; k++) {
-          c.beginPath();
-          c.ellipse(cx + (r() - 0.5) * 220, 50 + r() * 26, 90 + r() * 120, 18 + r() * 10, 0, 0, Math.PI * 2);
-          c.fill();
-        }
+      if (!lit) {
+        // aluminium composite panels painted deep teal: gradient, faint brushed streaks, panel seams
+        const gr = c.createLinearGradient(0, 0, 0, h);
+        gr.addColorStop(0, '#1e6b69'); gr.addColorStop(0.55, BRAND.teal); gr.addColorStop(1, '#0d3d3f');
+        c.fillStyle = gr; c.fillRect(0, 0, w, h);
+        const r = T.rng(66);
+        for (let i = 0; i < 900; i++) { c.fillStyle = `rgba(255,255,255,${r() * 0.025})`; c.fillRect(r() * w, r() * h, 40 + r() * 160, 1); }
+        c.fillStyle = 'rgba(0,0,0,0.28)';
+        for (let x = w / 10; x < w; x += w / 10) c.fillRect(Math.round(x), 0, 3, h);
+        c.fillStyle = 'rgba(255,255,255,0.05)';
+        for (let x = w / 10; x < w; x += w / 10) c.fillRect(Math.round(x) + 3, 0, 1, h);
+        const v = c.createLinearGradient(0, 0, 0, h);
+        v.addColorStop(0, 'rgba(0,0,0,0.25)'); v.addColorStop(0.15, 'rgba(0,0,0,0)'); v.addColorStop(0.85, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.3)');
+        c.fillStyle = v; c.fillRect(0, 0, w, h);
+        c.strokeStyle = '#0a2324'; c.lineWidth = 10; c.strokeRect(5, 5, w - 10, h - 10);
       }
-      // sun rays behind the badge, fading out
-      const [rc, rx] = T.makeCanvas(w, h);
-      rx.translate(w / 2, h * 0.47);
-      rx.fillStyle = 'rgba(244,196,110,0.5)';
-      for (let i = 0; i < 28; i += 2) {
-        const a0 = (i / 28) * Math.PI * 2, a1 = ((i + 1) / 28) * Math.PI * 2;
-        rx.beginPath(); rx.moveTo(0, 0); rx.arc(0, 0, 900, a0, a1); rx.closePath(); rx.fill();
+      // neon border: pink tube, thin teal tube inside it
+      const clipsAt = (inset) => {
+        const pts = [];
+        for (let x = 220; x < w - 100; x += 410) { pts.push([x, inset]); pts.push([x, h - inset]); }
+        return pts;
+      };
+      neonPath(c, () => { roundRect(c, 24, 24, w - 48, h - 48, 26); }, BRAND.pink, '#ffe1ec', 9, { lit, clips: clipsAt(24) });
+      neonPath(c, () => { roundRect(c, 44, 44, w - 88, h - 88, 16); }, BRAND.tealNeon, '#dcfff9', 4, { lit });
+
+      // the two names
+      glowWord(c, R.name, w * 0.262, h * 0.5, {
+        family: brandFont(F), size: 300, maxW: w * 0.36, maxH: h * 0.6, stops: BRAND.en,
+        glow: 'rgba(255,120,60,0.9)', edge: '#4c0c10', depth: 9, lit,
+      });
+      glowWord(c, R.nameAr, w * 0.738, h * 0.47, {
+        family: brandFontAr(F), size: 300, rtl: true, maxW: w * 0.3, maxH: h * 0.7, stops: BRAND.ar,
+        glow: 'rgba(255,79,139,0.9)', edge: '#4a0a26', depth: 9, lit,
+      });
+
+      // KOREAN BBQ roundel: yellow neon ring around a dark disc
+      const bx = w / 2, by = h / 2, br = 150;
+      if (!lit) {
+        c.fillStyle = 'rgba(0,0,0,0.35)'; c.beginPath(); c.arc(bx + 6, by + 8, br + 6, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#0a2b2c'; c.beginPath(); c.arc(bx, by, br, 0, Math.PI * 2); c.fill();
       }
-      rx.setTransform(1, 0, 0, 1, 0, 0);
-      rx.globalCompositeOperation = 'destination-in';
-      const fade = rx.createRadialGradient(w / 2, h * 0.47, 120, w / 2, h * 0.47, 760);
-      fade.addColorStop(0, 'rgba(0,0,0,0.75)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
-      rx.fillStyle = fade; rx.fillRect(0, 0, w, h);
-      c.drawImage(rc, 0, 0);
-      // pinstripes + painted keyline + frame line
-      c.fillStyle = '#2f7f7b'; c.fillRect(0, h - 40, w, 11);
-      c.fillStyle = '#c0302a'; c.fillRect(0, h - 24, w, 10);
-      c.strokeStyle = 'rgba(122,31,23,0.85)'; c.lineWidth = 4; c.strokeRect(34, 30, w - 68, h - 84);
-      c.strokeStyle = '#2a2522'; c.lineWidth = 14; c.strokeRect(7, 7, w - 14, h - 14);
-
-      const name = { color: '#c42f27', outline: 7, outlineColor: '#f7eedb', depth: 12, step: 1.9, side: '#33231d' };
-      label(c, R.name, w * 0.25, h * 0.45, { ...name, family: F.display, size: 300, maxW: w * 0.355, maxH: h * 0.56 });
-      label(c, R.nameAr, w * 0.75, h * 0.43, { ...name, family: F.arabic, weight: 800, size: 300, rtl: true, maxW: w * 0.3, maxH: h * 0.66 });
-
-      // badge
-      const bx = w / 2, by = h * 0.47, br = 158;
-      c.fillStyle = 'rgba(40,28,22,0.55)'; c.beginPath(); c.arc(bx + 9, by + 9, br, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#f5ecd8'; c.beginPath(); c.arc(bx, by, br, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#2b2421'; c.beginPath(); c.arc(bx, by, br - 13, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = '#c42f27'; c.lineWidth = 5; c.beginPath(); c.arc(bx, by, br - 26, 0, Math.PI * 2); c.stroke();
-      label(c, kind[0] || '', bx, by - 50, { family: F.display, size: 52, spacing: 9, color: '#f5ecd8', maxW: 200 });
-      label(c, kind.slice(1).join(' '), bx, by + 34, { family: F.display, size: 120, spacing: 4, color: '#f3b93f', maxW: 230 });
-      star(c, bx - 118, by - 50, 9, '#c42f27'); star(c, bx + 118, by - 50, 9, '#c42f27');
-      c.fillStyle = '#c42f27'; c.fillRect(bx - 70, by - 18, 140, 4);
+      neonPath(c, () => { c.beginPath(); c.arc(bx, by, br - 8, 0, Math.PI * 2); }, BRAND.yellow, '#fffbe6', 9, { lit });
+      neonPath(c, () => { c.beginPath(); c.arc(bx, by, br - 26, 0, Math.PI * 2); }, BRAND.pink, '#ffe1ec', 3, { lit });
+      glowWord(c, kind[0] || '', bx, by - 52, { family: brandFont(F), size: 52, spacing: 8, maxW: 190, stops: BRAND.gold, glow: 'rgba(255,211,92,0.8)', depth: 2, halo: 0.25, lit });
+      glowWord(c, kind.slice(1).join(' '), bx, by + 34, { family: brandFont(F), size: 118, spacing: 3, maxW: 210, stops: BRAND.gold, glow: 'rgba(255,200,80,0.9)', edge: '#5a3a06', depth: 4, lit });
+      for (const sx of [-1, 1]) star(c, bx + sx * 108, by - 52, 8, BRAND.pink);
     },
   };
 }
 
-// --- vertical lightbox: Arabic name on top, SEOULICIOUS stacked in tall letters, KOREAN BBQ at the foot
+// --- vertical lightbox (backlit acrylic face): Arabic name on top, SEOULICIOUS stacked in tall
+//     letters, KOREAN BBQ at the foot — same lit wordmark as the billboard
 function lightboxDesign(R, F) {
   const w = 384, h = 1980;
   const word = R.name.toUpperCase();
   const kind = R.kind.toUpperCase().split(' ');
   return {
-    w, h, bg: '#0b0a09', border: '#1d1b19', borderW: 14, aged: 0.1, seed: 81, lines: [],
-    fonts: [{ font: F.display, text: word + R.kind.toUpperCase() }, { font: F.arabic, weight: 800, text: R.nameAr }],
+    w, h, bg: BRAND.tealDeep, border: '#0a2324', borderW: 14, aged: 0.08, seed: 81, lines: [],
+    fonts: [
+      { font: brandFont(F), text: word + R.kind.toUpperCase() },
+      { font: brandFontAr(F), text: R.nameAr },
+    ],
     draw: (c) => {
-      const gold = '#f5c431';
-      c.strokeStyle = gold; c.lineWidth = 3; c.strokeRect(30, 30, w - 60, h - 60);
-      label(c, R.nameAr, w / 2, h * 0.08, { family: F.arabic, weight: 800, size: 160, rtl: true, color: gold, maxW: w - 76, maxH: 170 });
-      c.fillStyle = gold; c.fillRect(56, h * 0.145, w - 112, 4);
+      const gr = c.createLinearGradient(0, 0, w, 0);
+      gr.addColorStop(0, '#0f4446'); gr.addColorStop(0.5, '#17595a'); gr.addColorStop(1, '#0f4446');
+      c.fillStyle = gr; c.fillRect(14, 14, w - 28, h - 28);
+      neonPath(c, () => { roundRect(c, 30, 30, w - 60, h - 60, 14); }, BRAND.pink, '#ffe1ec', 5);
+      glowWord(c, R.nameAr, w / 2, h * 0.082, { family: brandFontAr(F), size: 170, rtl: true, maxW: w - 90, maxH: 190, stops: BRAND.ar, glow: 'rgba(255,79,139,0.85)', depth: 4 });
+      c.fillStyle = BRAND.yellow; c.fillRect(64, h * 0.152, w - 128, 4);
       // stacked tall letters
-      const y0 = h * 0.175, y1 = h * 0.838, cell = (y1 - y0) / word.length;
+      const y0 = h * 0.18, y1 = h * 0.835, cell = (y1 - y0) / word.length;
       c.save();
-      c.textBaseline = 'alphabetic'; c.textAlign = 'center';
-      c.font = fontSpec(100, F.display);
+      c.font = fontSpec(100, brandFont(F));
       const om = c.measureText('O');
       const capH = om.actualBoundingBoxAscent + om.actualBoundingBoxDescent;
-      const size = (100 * cell * 0.84) / capH;
       c.restore();
+      const size = (100 * cell * 0.82) / Math.max(1, capH);
       [...word].forEach((ch, i) => {
-        // tall letters: drawn condensed (85% width) like a sign-maker's cut-out letters
         c.save();
         c.translate(w / 2, y0 + cell * (i + 0.5));
-        c.scale(0.86, 1);
-        label(c, ch, 0, 0, { family: F.display, size, color: '#fff7ea' });
+        c.scale(0.9, 1);
+        glowWord(c, ch, 0, 0, { family: brandFont(F), size, stops: BRAND.en, glow: 'rgba(255,120,60,0.85)', depth: 4, halo: 0.22 });
         c.restore();
       });
-      c.fillStyle = gold; c.fillRect(56, h * 0.855, w - 112, 4);
-      label(c, kind[0] || '', w / 2, h * 0.895, { family: F.display, size: 62, spacing: 10, color: gold, maxW: w - 110 });
-      label(c, kind.slice(1).join(' '), w / 2, h * 0.948, { family: F.display, size: 112, spacing: 12, color: '#fff7ea', maxW: w - 110 });
+      c.fillStyle = BRAND.yellow; c.fillRect(64, h * 0.855, w - 128, 4);
+      glowWord(c, kind[0] || '', w / 2, h * 0.893, { family: brandFont(F), size: 66, spacing: 8, maxW: w - 110, stops: BRAND.gold, glow: 'rgba(255,211,92,0.8)', depth: 2, halo: 0.25 });
+      glowWord(c, kind.slice(1).join(' '), w / 2, h * 0.947, { family: brandFont(F), size: 120, spacing: 8, maxW: w - 110, stops: BRAND.gold, glow: 'rgba(255,200,80,0.85)', depth: 3, halo: 0.25 });
     },
   };
 }
@@ -452,9 +529,10 @@ function offerDesign(R, F, deal) {
   return {
     w, h, bg: cream, border: null, aged: 0.1, seed: 131, lines: [], image: photo,
     fonts: [
-      { font: F.display, text: `${P.kicker}${P.line1}${P.line2}${P.cur}${P.amount}${P.extraPrice}+${R.name}` },
+      { font: F.display, text: `${P.kicker}${P.line1}${P.line2}${P.cur}${P.amount}${P.extraPrice}+` },
       { font: F.sans, weight: 600, text: `WHAT'S INCLUDED OPTIONAL EXTRA ${deal.items.join('')}${P.extra}` },
-      { font: F.arabic, weight: 800, text: R.nameAr },
+      { font: brandFont(F), text: R.name },
+      { font: brandFontAr(F), text: R.nameAr },
     ],
     draw: (c) => {
       const r = T.rng(132);
@@ -545,9 +623,9 @@ function offerDesign(R, F, deal) {
       // footer
       c.fillStyle = ink; c.fillRect(0, h - 88, w, 88);
       c.fillStyle = mustard; c.fillRect(0, h - 88, w, 5);
-      label(c, R.name, w / 2 - 34, h - 42, { family: F.display, size: 44, spacing: 2, color: cream, align: 'right' });
+      label(c, R.name, w / 2 - 34, h - 42, { family: brandFont(F), size: 50, spacing: 1, color: cream, align: 'right' });
       c.fillStyle = mustard; c.beginPath(); c.arc(w / 2, h - 42, 6, 0, Math.PI * 2); c.fill();
-      label(c, R.nameAr, w / 2 + 34, h - 44, { family: F.arabic, weight: 800, size: 38, color: cream, align: 'left', rtl: true });
+      label(c, R.nameAr, w / 2 + 34, h - 46, { family: brandFontAr(F), size: 50, color: cream, align: 'left', rtl: true, maxH: 52 });
     },
   };
 }
@@ -631,11 +709,13 @@ function lanternDesign(R, F) {
   const w = 1024, h = 256;
   return {
     w, h, bg: '#f4efe4', border: null, aged: 0.15, seed: 51, lines: [],
-    fonts: [{ font: F.display, text: R.name }],
+    fonts: [{ font: brandFont(F), text: R.name }],
     draw: (c) => {
       c.fillStyle = '#c8322b'; c.fillRect(0, 0, w, h * 0.2); c.fillRect(0, h * 0.8, w, h * 0.2);
       c.fillStyle = '#2f5f9a'; c.fillRect(0, h * 0.2, w, h * 0.05); c.fillRect(0, h * 0.75, w, h * 0.05);
-      for (const u of [0.25, 0.75]) label(c, R.name, w * u, h * 0.5, { family: F.display, size: 72, color: '#c8322b', maxW: w * 0.3 });
+      for (const u of [0.25, 0.75]) {
+        label(c, R.name, w * u, h * 0.5, { family: brandFont(F), size: 84, color: '#e2372c', maxW: w * 0.3, depth: 3, step: 1.2, side: '#7a1418' });
+      }
     },
   };
 }
@@ -966,16 +1046,17 @@ function buildAwning(S) {
 }
 
 // ------------------------------------------------------------------
-// 5. painted billboard above the awning (English + Arabic + KOREAN BBQ)
+// 5. illuminated billboard above the awning (English + Arabic + KOREAN BBQ)
 // ------------------------------------------------------------------
 function buildBillboard(S) {
   const { g, mats, designs } = S;
   const d = designs.billboard;
   const bw = 13.0, bh = bw * (d.h / d.w);
   const tex = T.sign(d);
+  const glow = T.sign(designs.billboardGlow);     // only the lit letters + neon: drives the glow
   const mat = new THREE.MeshStandardMaterial({
-    map: tex, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.12, roughness: 0.8,
-    lightMap: billboardLightMap(bw, S.floodXs, S.downXs), lightMapIntensity: 1.9,
+    map: tex, emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 1.25, roughness: 0.5, metalness: 0.1,
+    lightMap: billboardLightMap(bw, S.floodXs, S.downXs), lightMapIntensity: 1.2,
   });
   signBox(g, mat, mats.woodDark, bw, bh, 0.08, 0, 3.12, S.zOut + 0.04);
   // painted steel cap over the top edge
@@ -1043,8 +1124,8 @@ function buildEave(S) {
   for (const x of S.downXs) dl.add(x, pd.y, pd.z, { rx: a });
   dl.build(g);
 
-  // one wide warm light washing down over the billboard, awning and upper front
-  spotLight(g, '#ffcf98', 6, 12, [0, 4.8, 1.45], [0, 2.4, 0.6], { angle: 1.35, penumbra: 1.0 });
+  // the sign's coloured spill: coral-pink glow falling on the awning, the eave soffit edge and the sidewalk
+  spotLight(g, '#ff7f6a', 9, 11, [0, 3.75, 0.75], [0, -0.45, 4.2], { angle: 1.4, penumbra: 1.0 });
 }
 
 // ------------------------------------------------------------------
