@@ -249,7 +249,7 @@
    ]
   },
   "steel_brushed": {
-   "source": "ACG Metal009",
+   "source": "ACG Metal009 (roughness/normal high-passed: brushing kept, blotches removed)",
    "license": "CC0",
    "tileMeters": [
     1.0,

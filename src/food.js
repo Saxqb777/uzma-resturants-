@@ -5,17 +5,20 @@
 import * as THREE from 'three';
 
 const loader = new THREE.TextureLoader();
-const NAMES = ['spicy_chicken', 'rice', 'kimchi', 'cucumber_salad', 'sauce', 'lettuce', 'grill_chicken'];
+const NAMES = ['spicy-chicken', 'rice', 'kimchi', 'cucumber-salad', 'dipping-sauce', 'lettuce', 'grill-grate-chicken', 'charcoal-embers'];
 const textures = {};
 
 // Load every food photo up front (missing files are fine: the dish keeps a plain colour)
 export async function loadFoodTextures() {
-  await Promise.all(NAMES.map((n) => new Promise((res) => {
-    loader.load(`assets/ai/food/${n}.jpg`, (t) => {
-      t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; textures[n] = t; res();
-    }, undefined, () => res());
-  })));
+  const load = (key, url) => new Promise((res) => {
+    loader.load(url, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; textures[key] = t; res(); }, undefined, () => res());
+  });
+  await Promise.all([
+    ...NAMES.map((n) => load(n, `assets/ai/food/${n}.jpg`)),
+    load('hero-polaroid', 'assets/ai/hero/01.jpg'),
+  ]);
 }
+export function foodTexture(name) { return textures[name] || null; }
 
 function foodMat(name, fallback, { rough = 0.55, glossy = false } = {}) {
   const t = textures[name];
@@ -41,13 +44,13 @@ function lathe(points, seg = 28) {
 
 export function makeFoodKit(M) {
   const mats = {
-    chicken: foodMat('spicy_chicken', '#b33a1e', { glossy: true }),
+    chicken: foodMat('spicy-chicken', '#b33a1e', { glossy: true }),
     rice: foodMat('rice', '#f1ece0', { rough: 0.7 }),
     kimchi: foodMat('kimchi', '#c2412a', { glossy: true }),
-    cucumber: foodMat('cucumber_salad', '#7da24a', { glossy: true }),
-    sauce: foodMat('sauce', '#8e1f12', { glossy: true }),
+    cucumber: foodMat('cucumber-salad', '#7da24a', { glossy: true }),
+    sauce: foodMat('dipping-sauce', '#8e1f12', { glossy: true }),
     lettuce: foodMat('lettuce', '#6ea14a', { rough: 0.5 }),
-    grillChicken: foodMat('grill_chicken', '#a63a1c', { glossy: true }),
+    grillChicken: foodMat('grill-grate-chicken', '#a63a1c', { glossy: true }),
   };
   const steel = M.steelBrushed || M.steel;
   const ceramic = M.ceramic;

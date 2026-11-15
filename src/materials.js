@@ -137,9 +137,9 @@ export async function buildMaterials(renderer) {
     cushionTerracotta: pbr(S.leather, { color: '#b4553a', rough: 0.85, normal: 1.0 }),
 
     // ---- steel
-    steel: pbr(S.steel, { noMap: true, color: '#c9cdd1', metal: 1.0, rough: 0.75, normal: 0.25, env: 1.0 }),          // stainless, brushed
-    steelBrushed: pbr(S.steel, { noMap: true, color: '#bfc3c7', metal: 1.0, rough: 0.95, normal: 0.3, env: 0.9 }),
-    duct: pbr(S.steel, { noMap: true, color: '#a9adb2', metal: 1.0, rough: 1.0, normal: 0.2, env: 0.7 }),
+    steel: pbr(S.steel, { noMap: true, color: '#d2d5d8', metal: 1.0, rough: 0.62, normal: 0.35, env: 1.5 }),          // stainless, brushed (table tops, pass)
+    steelBrushed: pbr(S.steel, { noMap: true, color: '#c6cacd', metal: 1.0, rough: 0.8, normal: 0.4, env: 1.4 }),    // kitchen counters / fronts
+    duct: pbr(S.steel, { noMap: true, color: '#a9adb2', metal: 1.0, rough: 0.95, normal: 0.25, env: 1.0 }),
     blackSteel: pbr(S.black, { color: '#9a9a9a', metal: 0.5, rough: 1.5, normal: 0.5 }),   // dark steel frames
     metalBlack: pbr(S.black, { metal: 0.0, rough: 1.6, normal: 0.5 }),                     // black powder coat
     grillIron: pbr(S.black, { color: '#5a5450', metal: 0.8, rough: 1.8, normal: 0.6 }),

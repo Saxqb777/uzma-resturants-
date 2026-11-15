@@ -9,7 +9,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { box, plane, corrugatedGeometry, InstanceBatch, pointLight, spotLight, flaskGeometry, mergeStatic } from './helpers.js';
 import * as T from './textures.js';
 import { LAYOUT as L } from './config.js';
-import { makeFoodKit } from './food.js';
+import { makeFoodKit, foodTexture } from './food.js';
 
 const TBL = L.table;                 // len 1.4 (x), wid 0.76 (z), top 0.76, seat 0.48
 const PITCH = L.dining.pitch;        // 2.3
@@ -61,6 +61,9 @@ export function buildInterior(ctx) {
   const B = batches(M);
   const food = makeFoodKit(M);
 
+  // real charcoal photo for the lit grills
+  const embers = foodTexture('charcoal-embers');
+  if (embers) { M.ember.map = embers; M.ember.emissiveMap = embers; M.ember.color.set('#ffffff'); M.ember.emissive.set('#ffffff'); M.ember.needsUpdate = true; }
   shell(g, M, W);
   ceiling(roof, M, B);
   booths(g, M, W);
@@ -305,10 +308,14 @@ function eaves(g, roof, M) {
 // ------------------------------------------------------------------ tables + settings
 function tables(g, M, B, food, rnd) {
   const Y = TBL.top;
+  // brushed stainless for the table tops: satin, not a mirror (a bulb hangs right above each one)
+  const top = M.steel.clone();
+  top.metalness = 0.75; top.roughness = Math.max(0.72, M.steel.roughness); top.envMapIntensity = 0.9;
+  top.color = new THREE.Color('#b9bcbf');
   for (const b of BOOTHS) {
     const { x, z } = b;
     // table: stainless top, black edge band, two legs with feet
-    box(g, M.steel, TBL.len, 0.035, TBL.wid, x, Y - 0.035, z);
+    box(g, top, TBL.len, 0.035, TBL.wid, x, Y - 0.035, z);
     box(g, M.blackSteel, TBL.len + 0.02, 0.05, TBL.wid + 0.02, x, Y - 0.08, z, { cast: false });
     for (const s of [-1, 1]) {
       box(g, M.blackSteel, 0.06, Y - 0.08, 0.06, x + s * 0.45, 0, z, { cast: false });
@@ -353,10 +360,24 @@ function tables(g, M, B, food, rnd) {
       if (rnd() < 0.5) for (const s of [-1, 1]) food.riceClosed(g, x - 0.05, Y, z + s * 0.27);
     }
 
+    if (b.id === HERO_TABLE) heroPolaroid(g, x + 0.13, Y + 0.002, z + 0.31);
+
     // bare warm bulb over every table
     const top = b.lane.startsWith('isl') ? 3.05 : 3.0;
     addBulb(B, x, 2.08, z, top);
   }
+}
+
+function heroPolaroid(g, x, y, z) {
+  const tex = foodTexture('hero-polaroid');
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.set(-Math.PI / 2, 0, 0.35); g.add(grp);
+  const frame = new THREE.Mesh(new THREE.PlaneGeometry(0.088, 0.107), new THREE.MeshStandardMaterial({ color: '#fbfaf5', roughness: 0.45 }));
+  frame.receiveShadow = true; grp.add(frame);
+  if (tex) {
+    const photo = new THREE.Mesh(new THREE.PlaneGeometry(0.078, 0.078), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3 }));
+    photo.position.set(0, 0.0105, 0.0006); grp.add(photo);
+  }
+  grp.userData.keep = true;
 }
 
 // ------------------------------------------------------------------ lights
