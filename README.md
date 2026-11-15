@@ -1,4 +1,4 @@
-# UZMA Korean BBQ: 3D restaurant tour
+# Seoulicious Korean BBQ: 3D restaurant tour
 
 A walk-through 3D restaurant that runs in the browser (three.js, no build step).
 
@@ -7,7 +7,7 @@ A walk-through 3D restaurant that runs in the browser (three.js, no build step).
 |---|---|
 | `Enter` / `→` / `Space` | next scene |
 | `←` / `Backspace` | previous scene |
-| `1`–`8` | jump to a scene |
+| `1`–`9` | jump to a scene |
 | `V` | look-around mode on/off |
 | `H` | hide the text |
 | `F` | full screen |
@@ -27,4 +27,6 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000`.
 
-Change the name, sign words and tour scenes in `src/config.js`. See `PLAN.md` for decisions and next steps.
+Change the name, menu, staff names and tour scenes in `src/config.js`. See `PLAN.md` for decisions and next steps, and `CREDITS.md` for asset licenses.
+
+The **Quality** button (bottom bar) switches Auto / High / Low. Use Low on a slow laptop.

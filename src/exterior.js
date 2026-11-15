@@ -381,8 +381,8 @@ function glowWord(c, text, x, y, o) {
   sh.addColorStop(0, 'rgba(255,255,255,0.28)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
   l.fillStyle = sh; l.fillRect(-W, top, W * 3, (bot - top) * 0.55);
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(lc, 0, 0); c.restore();
-  // trim cap
-  if (!o.lit) { c.lineJoin = 'round'; c.lineWidth = 1.4 * k; c.strokeStyle = o.trim || 'rgba(90,10,20,0.55)'; c.strokeText(text, bx, by); }
+  // trim cap (skipped for Arabic: its joined letters are overlapping contours, a stroke would show seams)
+  if (!o.lit && !o.rtl && o.trim !== false) { c.lineJoin = 'round'; c.lineWidth = 1.4 * k; c.strokeStyle = o.trim || 'rgba(90,10,20,0.55)'; c.strokeText(text, bx, by); }
   c.restore();
   return { m, size };
 }
@@ -1055,8 +1055,8 @@ function buildBillboard(S) {
   const tex = T.sign(d);
   const glow = T.sign(designs.billboardGlow);     // only the lit letters + neon: drives the glow
   const mat = new THREE.MeshStandardMaterial({
-    map: tex, emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 1.25, roughness: 0.5, metalness: 0.1,
-    lightMap: billboardLightMap(bw, S.floodXs, S.downXs), lightMapIntensity: 1.2,
+    map: tex, emissive: '#ffffff', emissiveMap: glow, emissiveIntensity: 0.62, roughness: 0.5, metalness: 0.1,
+    lightMap: billboardLightMap(bw, S.floodXs, S.downXs), lightMapIntensity: 0.8,
   });
   signBox(g, mat, mats.woodDark, bw, bh, 0.08, 0, 3.12, S.zOut + 0.04);
   // painted steel cap over the top edge
@@ -1134,7 +1134,7 @@ function buildEave(S) {
 function buildLightbox(S) {
   const { g, mats, animators, designs } = S;
   const tex = T.sign(designs.lightbox);
-  const mat = signMaterial(tex, { glow: 1.2, rough: 0.5 });
+  const mat = signMaterial(tex, { glow: 0.8, rough: 0.5 });
   const x = S.X0 + 0.5, zf = S.zOut + 0.08, y0 = 1.05, h = 3.2;
   signBox(g, mat, mats.blackSteel, 0.62, h, 0.16, x, y0, zf);
   // two little spot lamps on arms at the top
@@ -1146,7 +1146,7 @@ function buildLightbox(S) {
   const glow = pointLight(g, '#fff0d4', 5, 5, x + 0.2, 2.6, zf + 0.75);
   animators.push((t) => {
     const f = Math.sin(t * 0.7) > 0.995 ? 0.6 + 0.4 * Math.abs(Math.sin(t * 40)) : 1;
-    mat.emissiveIntensity = 1.2 * f;
+    mat.emissiveIntensity = 0.8 * f;
     glow.userData.level = f;
   });
 }

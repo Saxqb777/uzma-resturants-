@@ -61,6 +61,11 @@ This file is the project's memory. Any new chat should read it first.
   10. Live cooking station
   11. Main kitchen
   12. Floor plan
+- **Nov 15 follow-up feedback:**
+  - Two cashiers.
+  - Shop-name sign more vibrant (brand fonts: Lilita One + Lalezar, neon/channel-letter look).
+  - People must look alive: expressions, blinking, eye contact, warm skin.
+  - Better graphics: ambient occlusion, SMAA, real HDR lighting.
 - **Still waiting on her:** real menu items + prices (placeholders in `src/config.js` → `MENU`).
 - **Staff names:** Korean name tags, editable in `config.js` → `STAFF`.
 

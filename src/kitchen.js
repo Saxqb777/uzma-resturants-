@@ -54,8 +54,8 @@ export function buildKitchen(ctx) {
     pm.dispose();
   }
   if (env) {
-    const brighten = (m, rough = 1) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 0.6; c.roughness *= rough; return c; };
-    M = { ...M, steelBrushed: brighten(M.steelBrushed, 1.35), steel: brighten(M.steel, 1.2), whiteTile: brighten(M.whiteTile || M.kitchenTile), kitchenFloor: brighten(M.kitchenFloor || M.kitchenTile) };
+    const brighten = (m, rough = 1) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 1.05; c.roughness *= rough; return c; };
+    M = { ...M, steelBrushed: brighten(M.steelBrushed, 1.15), steel: brighten(M.steel, 1.1), whiteTile: brighten(M.whiteTile || M.kitchenTile), kitchenFloor: brighten(M.kitchenFloor || M.kitchenTile) };
   }
   const food = makeFoodKit(M);
   const rnd = T.rng(515);
@@ -129,6 +129,7 @@ function liveStation(g, roof, M, W, food, rnd, animators) {
   // back counter along the wall + shelves
   box(g, M.steelBrushed, len, 0.9, 0.6, 0, 0, LV.wallZ + 0.32);
   box(g, M.steel, len, 0.03, 0.62, 0, 0.9, LV.wallZ + 0.32, { cast: false });
+  cabinetFront(g, M, x0, x1, LV.wallZ + 0.625, 0.9, 0.8);
   for (const sx of [-1, 1]) {
     box(g, M.steel, 3.2, 0.025, 0.28, sx * 3.6, 1.55, LV.wallZ + 0.15, { cast: false });
     box(g, M.steel, 3.2, 0.025, 0.28, sx * 3.6, 1.95, LV.wallZ + 0.15, { cast: false });
@@ -228,6 +229,24 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   // back wall: sinks + hand-wash station, dishwasher, microwaves & rice cookers on shelves
   box(g, steel, 9.0, 0.9, 0.7, -0.2, 0, z1 + 0.38);
   box(g, M.steel, 9.0, 0.04, 0.72, -0.2, 0.9, z1 + 0.38, { cast: false });
+  cabinetFront(g, M, -4.7, 4.3, z1 + 0.735, 0.9);
+  // colour-coded chopping boards in a wall rack (food safety), a utensil rail and a knife strip
+  const boardCols = ['#c9343a', '#3f9e52', '#2f6fb5', '#e8c33a', '#f4f4f0'];
+  boardCols.forEach((c, i) => rb(g, std(c, { roughness: 0.6 }), 0.03, 0.34, 0.26, 3.75 + i * 0.07, 1.02, z1 + 0.2, 0.008));
+  box(g, M.steel, 0.5, 0.03, 0.3, 3.9, 0.95, z1 + 0.2, { cast: false });
+  box(g, M.steel, 1.8, 0.02, 0.02, -3.2, 1.45, z1 + 0.04, { cast: false });
+  for (let i = 0; i < 7; i++) {
+    const x = -4.0 + i * 0.26;
+    box(g, M.steel, 0.012, 0.3, 0.012, x, 1.14, z1 + 0.05, { cast: false });
+    const head = new THREE.Mesh(i % 2 ? new THREE.SphereGeometry(0.045, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2) : new THREE.BoxGeometry(0.07, 0.09, 0.008), M.steel);
+    head.position.set(x, 1.12, z1 + 0.05); g.add(head);
+  }
+  box(g, std('#1b1b1b'), 0.7, 0.05, 0.015, 4.4, 1.5, z1 + 0.02, { cast: false });
+  for (let i = 0; i < 4; i++) box(g, std('#d9dcdf', { metalness: 0.9, roughness: 0.2 }), 0.035, 0.2 + i * 0.03, 0.004, 4.15 + i * 0.16, 1.3 - i * 0.03, z1 + 0.03, { cast: false });
+  // big pots on the top shelf
+  for (const [x, r] of [[-3.9, 0.17], [-3.4, 0.14], [3.7, 0.16]]) {
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(r, r, r * 1.3, 20), M.steelBrushed); pot.position.set(x, 2.28 + r * 0.65, z1 + 0.22); g.add(pot);
+  }
   for (const x of [-3.6, -2.9]) box(g, std('#c7cacc', { metalness: 0.9, roughness: 0.25 }), 0.6, 0.02, 0.45, x, 0.91, z1 + 0.38, { cast: false });
   faucet(g, M, -3.25, z1 + 0.15);
   box(g, white, 0.45, 0.32, 0.35, -1.9, 0.94, z1 + 0.25);                                  // hand-wash basin
@@ -261,6 +280,7 @@ function mainKitchen(g, roof, M, W, food, rnd) {
     box(g, steel, 2.2, 0.88, 0.95, x, 0, -23.6);
     box(g, M.steel, 2.24, 0.04, 0.99, x, 0.88, -23.6, { cast: false });
     box(g, M.steel, 2.1, 0.02, 0.85, x, 0.2, -23.6, { cast: false });
+    cabinetFront(g, M, x - 1.1, x + 1.1, -23.12, 0.88, 0.73);
     const board = rb(g, std(kind === 'veg' ? '#3f9e52' : '#c9343a', { roughness: 0.6 }), 0.5, 0.025, 0.3, x, 0.92, -23.91, 0.01);
     board.userData.keep = true;
     if (kind === 'veg') vegetables(g, x, 0.92, -23.45, rnd);
@@ -269,11 +289,22 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   // kitchen side of the pass: plated dishes going out, heat lamp is on the dining side
   for (const x of [-0.9, 0.0, 0.9]) tray(g, x, K.pass.y0 + 0.05, L.kitchenZ - 0.12, food, rnd);
 
+  // a clean white ceiling for the kitchen (the dining room's is black)
+  const kc = new THREE.Mesh(new THREE.PlaneGeometry(L.x1 - L.x0, z0 - z1), new THREE.MeshStandardMaterial({ color: '#eef0ee', roughness: 0.9 }));
+  kc.rotation.x = Math.PI / 2; kc.position.set(0, L.ceil - 0.012, (z0 + z1) / 2); roof.add(kc);
   // bright, clean white light (ceiling panels in the roof group, real lights stay)
   const panel = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#f2f7ff', emissiveIntensity: 1.6 });
   for (const x of [-4.2, -1.4, 1.4, 4.2]) for (const z of [-22.6, -25.3]) box(roof, panel, 1.2, 0.03, 0.6, x, L.ceil - 0.04, z, { cast: false, receive: false });
   pointLight(g, '#f6f9ff', 7.5, 11, -3.2, 3.6, -24.0);
   pointLight(g, '#f6f9ff', 7.5, 11, 3.2, 3.6, -24.0);
+}
+
+// door seams and handles on the front of a steel counter running along X (front face at z)
+function cabinetFront(g, M, x0, x1, z, h = 0.86, doorW = 0.75) {
+  const dark = std('#3a3f42', { roughness: 0.6 });
+  for (let x = x0 + doorW; x < x1 - 0.1; x += doorW) box(g, dark, 0.008, h - 0.14, 0.004, x, 0.1, z, { cast: false });
+  for (let x = x0 + doorW / 2; x < x1; x += doorW) box(g, M.steel, 0.16, 0.018, 0.03, x, h - 0.16, z + 0.012, { cast: false });
+  box(g, dark, x1 - x0, 0.09, 0.004, (x0 + x1) / 2, 0, z, { cast: false });   // kick plate
 }
 
 function faucet(g, M, x, z) {

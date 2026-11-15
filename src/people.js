@@ -221,6 +221,14 @@ function prepareTemplate(scene, entry) {
   for (const p of skinnedPoints(tpl.meshes)) top = Math.max(top, p.y);
   tpl.dims.height = top;
   tpl.dims.child = (entry.ageGroup === 'child') || top < 1.55;
+  // skin + eye shading on the head and body materials
+  const tone = sampleSkinTone(tpl);
+  for (const m of tpl.meshes) {
+    const part = m.userData.part;
+    if (part !== 'head' && part !== 'body' && part !== 'all') continue;
+    addEyeMask(m);
+    patchSkinMaterial(m.material, tone);
+  }
   return tpl;
 }
 
@@ -1024,6 +1032,15 @@ export function createPerson(id, opts = {}) {
   r.apply(snaps[0]);
   root.updateMatrixWorld(true);
 
+  // face
+  const face = new Face(r);
+  const moodName = opts.mood || POSE_MOOD[poseName] || 'smile';
+  if (!MOODS[moodName]) throw new Error(`people: unknown mood "${moodName}"`);
+  ctx.face = face; ctx.mood = moodName;
+  ctx.faceBase = { ...MOODS[moodName], ...(opts.face || {}) };
+  face.apply(ctx.faceBase, opts.gaze || null);
+  root.updateMatrixWorld(true);
+
   // props
   if (holding) attachProp(r, holding, poseName, ctx);
 
@@ -1191,7 +1208,7 @@ function bakeSkinned(mesh) {
   g.setAttribute('position', new THREE.BufferAttribute(P, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(N, 3));
   for (const name of Object.keys(src.attributes)) {
-    if (name.startsWith('uv')) g.setAttribute(name, src.attributes[name]);
+    if (name.startsWith('uv') || name === 'pEye') g.setAttribute(name, src.attributes[name]);
   }
   if (src.index) g.setIndex(src.index);
   for (const gr of src.groups) g.addGroup(gr.start, gr.count, gr.materialIndex);
@@ -2046,4 +2063,221 @@ function attachProp(r, kind, poseName, ctx) {
   obj.updateMatrixWorld(true);
   r.b[`${s} Hand`].attach(obj);
   return obj;
+}
+
+// ----------------------------------------------------------------------------------- faces
+// Rocketbox faces are driven by ~28 small bones. Expressions are built from "action units": offsets in
+// millimetres in face space (x = towards the person's LEFT, y = up, z = forward) for the left-side bone
+// (the right side is mirrored), or rotations in degrees about the face's left-right axis.
+//   { b: bone, t: [x, y, z] }          translate         (paired bones are written without the L/R prefix)
+//   { b: bone, r: deg }                rotate about its own origin (jaw)
+//   { b: bone, r: deg, pivot: 'Eye' }  rotate about the eye centre (eyelids slide over the eyeball)
+const FACE_AU = {
+  // closed-mouth smile: lip corners up/out/back, cheeks lifted, lower lids pushed up a little
+  smile: [
+    { b: 'MouthCorner', t: [5.5, 6.5, -4.0] }, { b: 'Cheek', t: [1.5, 4.5, 1.5] }, { b: 'Caninus', t: [2.0, 3.0, 0.3] },
+    { b: 'Upperlip', t: [2.0, 1.2, -0.8] }, { b: 'MouthBottom', t: [2.4, 2.0, -1.0] }, { b: 'Masseter', t: [1.2, 1.4, 0] },
+    { b: 'MBottomLip', t: [0, 1.0, -0.6] }, { b: 'MUpperLip', t: [0, 0.3, -0.5] }, { b: 'EyeBlinkBottom', r: -5, pivot: 'Eye' },
+  ],
+  // open smile on top of "smile": upper lip lifts off the teeth, jaw drops, corners go wider
+  grin: [
+    { b: 'MouthCorner', t: [2.0, 2.0, -1.5] }, { b: 'MUpperLip', t: [0, 2.2, 0.2] }, { b: 'Upperlip', t: [0.5, 2.6, 0] },
+    { b: 'Cheek', t: [0.6, 2.0, 0.8] }, { b: 'Caninus', t: [0.6, 1.8, 0.2] }, { b: 'MJaw', r: 5.0 },
+    { b: 'MBottomLip', t: [0, -0.4, 0] }, { b: 'EyeBlinkBottom', r: -5, pivot: 'Eye' }, { b: 'EyeBlinkTop', r: 6, pivot: 'Eye' },
+  ],
+  jaw: [{ b: 'MJaw', r: 9 }],                                                        // mouth open
+  lipsOpen: [{ b: 'MUpperLip', t: [0, 1.0, 0] }, { b: 'Upperlip', t: [0, 0.8, 0] }, { b: 'MBottomLip', t: [0, -1.4, 0] }, { b: 'MouthBottom', t: [0, -1.1, 0] }],
+  oo: [{ b: 'MouthCorner', t: [-2.6, 0, 1.2] }, { b: 'MUpperLip', t: [0, 0.3, 1.2] }, { b: 'MBottomLip', t: [0, -0.3, 1.2] }, { b: 'Upperlip', t: [-0.8, 0.2, 0.8] }, { b: 'MouthBottom', t: [-0.8, -0.2, 0.8] }],
+  ee: [{ b: 'MouthCorner', t: [2.2, 0.6, -1.0] }, { b: 'Upperlip', t: [0.5, 0.5, 0] }, { b: 'MouthBottom', t: [0.5, -0.4, 0] }],
+  press: [{ b: 'MBottomLip', t: [0, 0.7, -0.4] }, { b: 'MUpperLip', t: [0, -0.4, -0.3] }, { b: 'MouthCorner', t: [0.8, 0.3, -0.6] }],
+  blink: [{ b: 'EyeBlinkTop', r: 34, pivot: 'Eye' }, { b: 'EyeBlinkBottom', r: -8, pivot: 'Eye' }],
+  lidDown: [{ b: 'EyeBlinkTop', r: 12, pivot: 'Eye' }],                              // relaxed / looking down
+  squint: [{ b: 'EyeBlinkBottom', r: -6, pivot: 'Eye' }, { b: 'EyeBlinkTop', r: 5, pivot: 'Eye' }, { b: 'Cheek', t: [0, 1.0, 0.4] }],
+  browUp: [{ b: 'InnerEyebrow', t: [0, 5.0, 0] }, { b: 'OuterEyebrow', t: [0, 4.5, 0] }, { b: 'MMiddleEyebrow', t: [0, 4.0, 0] }, { b: 'EyeBlinkTop', r: -4, pivot: 'Eye' }],
+  browIn: [{ b: 'InnerEyebrow', t: [-1.2, -1.0, 0.4] }, { b: 'MMiddleEyebrow', t: [0, -0.8, 0.3] }],   // concentration
+  browSoft: [{ b: 'InnerEyebrow', t: [0, 1.6, 0] }, { b: 'OuterEyebrow', t: [0, -0.4, 0] }],          // friendly, open
+};
+const FACE_PAIRED = new Set(['Eye', 'MouthBottom', 'Masseter', 'Caninus', 'EyeBlinkBottom', 'Upperlip', 'MouthCorner', 'Cheek', 'EyeBlinkTop', 'InnerEyebrow', 'OuterEyebrow']);
+
+// Base expression per mood (action-unit weights). Animated people move around these; static ones bake them.
+const MOODS = {
+  neutral: {},
+  smile: { smile: 0.62, browSoft: 0.35, squint: 0.15 },
+  laugh: { smile: 0.8, grin: 0.55, browSoft: 0.4, squint: 0.3 },
+  talk: { smile: 0.4, browSoft: 0.3 },
+  focus: { smile: 0.22, browIn: 0.3, lidDown: 0.35, press: 0.25 },
+};
+const POSE_MOOD = {
+  stand: 'smile', 'stand-talk': 'talk', wave: 'smile', sit: 'smile', 'sit-eat': 'smile', 'sit-talk': 'talk', 'sit-cheers': 'laugh',
+  'sit-phone': 'smile', 'cook-stir': 'focus', 'cook-flip': 'focus', 'prep-chop': 'focus', cashier: 'smile', 'carry-tray': 'smile', photo: 'smile', pin: 'smile',
+};
+
+function faceTemplate(tpl) {
+  if (tpl.cache.face !== undefined) return tpl.cache.face;
+  const b = tpl.bones;
+  if (!b.LEye || !b.REye || !b.MJaw || !b.LMouthCorner) return (tpl.cache.face = null);
+  // rest pose of the template
+  for (const [name, r] of tpl.rest) { b[name].position.copy(r.p); b[name].quaternion.copy(r.q); }
+  tpl.scene.updateMatrixWorld(true);
+  const wp = (n) => new THREE.Vector3().setFromMatrixPosition(b[n].matrixWorld);
+  const scale = wp('LEye').distanceTo(wp('REye')) / 0.062;            // face size relative to an average adult
+  const data = {};
+  const add = (name, side) => {
+    const bone = b[name]; if (!bone) return;
+    const pq = bone.parent.getWorldQuaternion(new THREE.Quaternion());
+    const inv = pq.clone().invert();
+    const d = { rest: tpl.rest.get(name), inv, side, axX: RIGHT_X.clone().applyQuaternion(inv), axY: UP.clone().applyQuaternion(inv) };
+    const eye = side ? b[(side > 0 ? 'L' : 'R') + 'Eye'] : null;
+    if (eye) d.pivot = bone.parent.worldToLocal(wp(eye.name === b.LEye.name ? 'LEye' : 'REye'));
+    data[name] = d;
+  };
+  for (const n of FACE_PAIRED) { add('L' + n, 1); add('R' + n, -1); }
+  for (const n of ['MJaw', 'MBottomLip', 'MUpperLip', 'MMiddleEyebrow', 'MNose', 'MTongue']) add(n, 0);
+  return (tpl.cache.face = { scale, data });
+}
+
+class Face {
+  constructor(rig) {
+    this.rig = rig;
+    this.tpl = faceTemplate(rig.tpl);
+    this.ok = !!this.tpl;
+    if (!this.ok) return;
+    this.items = Object.entries(this.tpl.data).filter(([n]) => rig.b[n]).map(([name, d]) => ({ name, d, bone: rig.b[name], t: new THREE.Vector3(), r: 0, touched: false }));
+    this.byName = new Map(this.items.map((it) => [it.name, it]));
+    this.eyes = ['LEye', 'REye'].map((n) => this.byName.get(n));
+    this._q = new THREE.Quaternion(); this._v = new THREE.Vector3();
+  }
+  // weights: { au: weight }, gaze: { yaw, pitch } in radians (yaw > 0 looks to the person's left, pitch > 0 looks up)
+  apply(weights, gaze) {
+    if (!this.ok) return;
+    for (const it of this.items) { it.t.set(0, 0, 0); it.r = 0; }
+    for (const au in weights) {
+      const w = weights[au], ops = FACE_AU[au];
+      if (!w || !ops) continue;
+      for (const op of ops) {
+        const paired = FACE_PAIRED.has(op.b);
+        for (const side of paired ? [1, -1] : [0]) {
+          const it = this.byName.get(paired ? (side > 0 ? 'L' : 'R') + op.b : op.b);
+          if (!it) continue;
+          if (op.t) { it.t.x += op.t[0] * w * (side || 1); it.t.y += op.t[1] * w; it.t.z += op.t[2] * w; }
+          if (op.r) it.r += op.r * w;
+        }
+      }
+    }
+    const k = this.tpl.scale * 0.001;
+    const q = this._q, v = this._v;
+    for (const it of this.items) {
+      const d = it.d, bone = it.bone;
+      if (it === this.eyes[0] || it === this.eyes[1]) continue;
+      bone.position.copy(d.rest.p); bone.quaternion.copy(d.rest.q);
+      if (it.r) {
+        q.setFromAxisAngle(d.axX, it.r * DEG);
+        bone.quaternion.premultiply(q);
+        if (d.pivot && it.name.includes('Blink')) bone.position.sub(d.pivot).applyQuaternion(q).add(d.pivot);
+      }
+      if (it.t.lengthSq() > 0) bone.position.add(v.copy(it.t).multiplyScalar(k).applyQuaternion(d.inv));
+    }
+    const yaw = gaze ? gaze.yaw : 0, pitch = gaze ? gaze.pitch : 0;
+    for (const it of this.eyes) {
+      if (!it) continue;
+      it.bone.quaternion.copy(it.d.rest.q);
+      if (pitch) it.bone.quaternion.premultiply(q.setFromAxisAngle(it.d.axX, -pitch));
+      if (yaw) it.bone.quaternion.premultiply(q.setFromAxisAngle(it.d.axY, yaw));
+    }
+  }
+}
+
+// ----------------------------------------------------------------------------------- skin + eye shading
+// Small additions to MeshStandardMaterial for the avatar head/body materials:
+//   - skin texels (found by comparing the colour map with the avatar's own skin tone) get wrap lighting,
+//     a reddish scatter band at the light terminator, a warm lift of the ambient light and a satin
+//     roughness, so shadowed cheeks/hands stay warm instead of grey;
+//   - eyeballs (per-vertex mask "pEye") get a wet, glossy surface that picks up catchlights, and a
+//     little extra fill so the whites never go dark under the brow.
+const SKIN = { wrap: 0.42, scatter: 0.3, ambient: 0.22, rough: 0.56, eyeRough: 0.07, eyeFill: 0.45 };
+
+function sampleSkinTone(tpl) {
+  const head = tpl.meshes.find((m) => m.userData.part === 'head') || tpl.meshes[0];
+  const map = head && head.material.map;
+  const fallback = new THREE.Color(0.55, 0.36, 0.27);
+  if (!map || !map.image || typeof document === 'undefined') return fallback;
+  try {
+    const S = 128;
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(map.image, 0, 0, S, S);
+    const px = g.getImageData(0, 0, S, S).data;
+    const rd = restData(tpl).meshes[head.userData.part];
+    const uv = head.geometry.attributes.uv;
+    map.updateMatrix();
+    const v = new THREE.Vector2(), samples = [];
+    for (let i = 0; i < rd.count; i++) {
+      if (!/Cheek|Caninus|Masseter|MNose/.test(rd.dom[i])) continue;
+      v.fromBufferAttribute(uv, i).applyMatrix3(map.matrix);
+      const x = clamp(Math.floor((v.x - Math.floor(v.x)) * S), 0, S - 1), y = clamp(Math.floor((v.y - Math.floor(v.y)) * S), 0, S - 1);
+      const o = (y * S + x) * 4;
+      samples.push([px[o], px[o + 1], px[o + 2]]);
+    }
+    if (samples.length < 8) return fallback;
+    samples.sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+    const mid = samples.slice(Math.floor(samples.length * 0.3), Math.ceil(samples.length * 0.8));
+    const s = mid.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]], [0, 0, 0]).map((x) => x / mid.length / 255);
+    return new THREE.Color().setRGB(s[0], s[1], s[2], THREE.SRGBColorSpace);
+  } catch (e) { return fallback; }
+}
+
+function patchSkinMaterial(mat, tone) {
+  mat.userData.skinTone = tone;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.pSkinTone = { value: tone };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float pEye;\nvarying float vPEye;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPEye = pEye;');
+    let f = shader.fragmentShader;
+    f = f.replace('#include <common>', '#include <common>\nuniform vec3 pSkinTone;\nvarying float vPEye;\nfloat gSkin = 0.0;');
+    f = f.replace('#include <map_fragment>', `#include <map_fragment>
+	{
+		vec3 pc = diffuseColor.rgb;
+		float pl = dot( pc, vec3( 0.3333 ) ) + 1e-4;
+		float pr = dot( pSkinTone, vec3( 0.3333 ) ) + 1e-4;
+		float pd = distance( pc / pl, pSkinTone / pr );
+		float plr = pl / pr;
+		gSkin = ( 1.0 - smoothstep( 0.16, 0.40, pd ) ) * smoothstep( 0.22, 0.5, plr ) * ( 1.0 - smoothstep( 2.4, 3.6, plr ) ) * ( 1.0 - vPEye );
+		// eyes: lift the whites and irises a little
+		diffuseColor.rgb = mix( diffuseColor.rgb, min( vec3( 1.0 ), pow( diffuseColor.rgb, vec3( 0.86 ) ) * 1.12 ), vPEye );
+	}`);
+    f = f.replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+	roughnessFactor = mix( roughnessFactor, ${SKIN.rough.toFixed(3)}, gSkin );
+	roughnessFactor = mix( roughnessFactor, ${SKIN.eyeRough.toFixed(3)}, vPEye );`);
+    const chunk = THREE.ShaderChunk.lights_physical_pars_fragment;
+    const lambert = 'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );';
+    if (chunk && chunk.includes(lambert)) {
+      f = f.replace('#include <lights_physical_pars_fragment>', chunk.replace(lambert, `
+	float pWrap = ${SKIN.wrap.toFixed(3)} * gSkin;
+	float pNL = saturate( ( dot( geometryNormal, directLight.direction ) + pWrap ) / ( 1.0 + pWrap ) );
+	vec3 pIrr = pNL * directLight.color;
+	pIrr += gSkin * ${SKIN.scatter.toFixed(3)} * directLight.color * vec3( 1.0, 0.28, 0.12 ) * smoothstep( 0.0, 0.3, pNL ) * ( 1.0 - smoothstep( 0.05, 0.55, dotNL ) );
+	reflectedLight.directDiffuse += pIrr * BRDF_Lambert( material.diffuseColor );`));
+    }
+    f = f.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+	{
+		float pFres = pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
+		reflectedLight.indirectDiffuse *= mix( vec3( 1.0 ), vec3( 1.0 + ${SKIN.ambient.toFixed(3)}, 1.0 + ${(SKIN.ambient * 0.35).toFixed(3)}, 1.0 ) * ( 1.0 + 0.35 * pFres ), gSkin );
+		reflectedLight.indirectDiffuse *= 1.0 + ${SKIN.eyeFill.toFixed(3)} * vPEye;
+	}`);
+    shader.fragmentShader = f;
+  };
+  mat.customProgramCacheKey = () => 'people-skin-1';
+  mat.needsUpdate = true;
+}
+
+// per-vertex eye mask for the head mesh (zeros elsewhere)
+function addEyeMask(mesh) {
+  const g = mesh.geometry;
+  if (g.attributes.pEye) return;
+  const n = g.attributes.position.count, a = new Float32Array(n);
+  const bones = mesh.skeleton.bones, si = g.attributes.skinIndex, sw = g.attributes.skinWeight;
+  const isEye = bones.map((b) => /(^|_)[LR]Eye$/.test(b.name));
+  if (isEye.some(Boolean)) for (let i = 0; i < n; i++) { let w = 0; for (let k = 0; k < 4; k++) if (isEye[si.getComponent(i, k)]) w += sw.getComponent(i, k); a[i] = w > 0.5 ? 1 : 0; }
+  g.setAttribute('pEye', new THREE.BufferAttribute(a, 1));
 }

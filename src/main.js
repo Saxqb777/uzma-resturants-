@@ -106,6 +106,43 @@ ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusE
 }
 composer.addPass(ao);
 
+// Depth of field for the close-up slides: the subject stays sharp, the background melts away like a
+// real camera lens. Reuses the ambient-occlusion depth buffer, so it costs one extra blur pass.
+const dof = new ShaderPass({
+  uniforms: {
+    tDiffuse: { value: null }, tDepth: { value: null },
+    focus: { value: 3 }, range: { value: 0.6 }, maxBlur: { value: 0 },
+    near: { value: 0.05 }, far: { value: 160 }, px: { value: new THREE.Vector2(1 / 1280, 1 / 720) }, edge: { value: 2.2 },
+  },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `
+    #include <packing>
+    uniform sampler2D tDiffuse, tDepth; uniform float focus, range, maxBlur, near, far, edge; uniform vec2 px; varying vec2 vUv;
+    float dist(vec2 uv){ return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far); }
+    float coc(float d){ return clamp((abs(d - focus) - range) / max(focus, 0.6), 0.0, 1.0) * maxBlur; }
+    void main(){
+      vec4 base = texture2D(tDiffuse, vUv);
+      // the depth buffer is lower-res than the picture: take the sharpest of the neighbouring depths,
+      // so the outline of an in-focus subject never picks up a blurry halo
+      vec2 e = px * edge;
+      float c0 = min(min(coc(dist(vUv)), min(coc(dist(vUv + vec2(e.x, 0.0))), coc(dist(vUv - vec2(e.x, 0.0))))),
+                     min(coc(dist(vUv + vec2(0.0, e.y))), coc(dist(vUv - vec2(0.0, e.y)))));
+      if (maxBlur <= 0.01 || c0 < 0.6) { gl_FragColor = base; return; }
+      vec3 acc = base.rgb; float wsum = 1.0;
+      for (int i = 0; i < 18; i++) {
+        float fi = float(i);
+        float r = sqrt((fi + 0.5) / 18.0), a = fi * 2.39996323;
+        vec2 uv = vUv + vec2(cos(a), sin(a)) * r * c0 * px;
+        float w = coc(dist(uv)) >= c0 * r * 0.8 ? 1.0 : 0.12;     // keep sharp things from smearing into the blur
+        acc += texture2D(tDiffuse, uv).rgb * w; wsum += w;
+      }
+      gl_FragColor = vec4(acc / wsum, base.a);
+    }`,
+});
+dof.uniforms.tDepth.value = ao.depthTexture;   // (set after construction: ShaderPass clones its uniforms)
+dof.enabled = false;
+composer.addPass(dof);
+
 const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.34, 0.4, 1.05);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
@@ -123,6 +160,9 @@ const grade = new ShaderPass({
       float v = smoothstep(0.78, 0.18, length(d));
       c.rgb *= mix(1.0 - vignette, 1.0, v);
       c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), warmth);       // warm grade (off in the white kitchen)
+      float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+      c.rgb = mix(vec3(l), c.rgb, 1.12);                                // a little more colour
+      c.rgb = (c.rgb - 0.5) * 1.05 + 0.5;                               // a little more contrast
       c.rgb += (h(vUv * 917.0 + fract(time) * 37.0) - 0.5) * grain;     // film grain
       gl_FragColor = c;
     }`,
@@ -205,6 +245,9 @@ async function preload() {
   tmp.dispose();
   roof.visible = true;
   zones.force('all');
+  // 4) one frame through the whole effect chain, so the ambient-occlusion and bloom shaders are ready too
+  director.snapTo(SCENES[0]);
+  composer.render();
 }
 
 // ------------------------------------------------------------ tour + look-around
@@ -387,6 +430,15 @@ function frame() {
   hemi.intensity += (want.i - hemi.intensity) * k;
   hemi.color.lerp(want.sky, k); hemi.groundColor.lerp(want.ground, k);
   zones.update(dt);
+  // focus: close-up slides pull focus onto their subject once the camera has arrived
+  const sc = SCENES[director.index];
+  const wantBlur = mode === 'tour' && !director.anim && sc.dof && ao.enabled ? sc.dof * (renderer.domElement.height / 1080) : 0;
+  const du = dof.uniforms;
+  du.maxBlur.value += (wantBlur - du.maxBlur.value) * (snapLook ? 1 : Math.min(1, dt * 2.2));
+  if (sc.dof) du.focus.value = sc.focus || new THREE.Vector3(...sc.cam).distanceTo(new THREE.Vector3(...sc.look));
+  du.near.value = camera.near; du.far.value = camera.far;
+  du.px.value.set(1 / renderer.domElement.width, 1 / renderer.domElement.height);
+  dof.enabled = du.maxBlur.value > 0.05;
   grade.uniforms.time.value = t;
   composer.render();
   updateLabels();
@@ -399,7 +451,7 @@ window.__uzma = {
   resume: () => renderer.setAnimationLoop(frame),
   renderOnce: () => frame(),
   tick: (dt) => { t += dt; for (const f of animators) f(t, dt); },
-  quality, zones, composer, ao, bloom,
+  quality, zones, composer, ao, bloom, dof,
   settle: (on = true) => { snapLook = on; },
 };
 

@@ -83,6 +83,7 @@ export const LAYOUT = {
 //  zone decides the transition: same zone glides, different zone fades.
 //  glide: true → arrive by gliding from the previous scene (via = curve point).
 //  story → what the photographer is doing ('photo' at the table, 'pin' at the wall).
+//  dof → background blur strength (pixels at 1080p) once the camera rests; focus = sharp distance in meters.
 // ------------------------------------------------------------
 export const SCENES = [
   {
@@ -97,6 +98,7 @@ export const SCENES = [
     title: 'Korean BBQ Meal Deal · AED 59',
     text: 'Spicy chicken BBQ, steamed rice, kimchi, cucumber salad and our signature sauce. Add a polaroid for AED 5.',
     cam: [-2.0, 0.55, 3.6], look: [-2.6, 0.2, 1.6], fov: 40,
+    dof: 9, focus: 2.0,
     drift: [0.12, 0.02, -0.12],
   },
   {
@@ -126,13 +128,15 @@ export const SCENES = [
     title: 'Grill at the Table',
     text: 'The meal deal, served: spicy chicken sizzling on the grill, rice, kimchi and cucumber salad, plus a polaroid to remember it.',
     cam: [0.15, 1.55, -5.15], look: [1.65, 0.8, -6.2], fov: 50,
+    dof: 8, focus: 1.9,
     drift: [0.08, 0.04, -0.15],
   },
   {
     id: 'cashier', zone: 'in', kicker: 'Pay & polaroids',
     title: 'The Cashier Corner',
     text: 'Pay with a smile, grab a menu, and meet our Seoulicious family on the polaroid wall.',
-    cam: [3.0, 1.65, -1.25], look: [6.9, 1.45, -3.25], fov: 56,
+    cam: [3.0, 1.65, -1.25], look: [6.5, 1.45, -3.7], fov: 56,
+    dof: 4, focus: 4.4,
     drift: [0.15, 0, -0.3],
   },
   {
@@ -140,6 +144,7 @@ export const SCENES = [
     title: 'Polaroid Time',
     text: 'Jisoo snaps a polaroid of our guests: a memory to keep for just AED 5.',
     cam: [1.1, 1.75, -7.2], look: [-1.8, 1.05, -8.5], fov: 52,
+    dof: 6, focus: 3.3,
     drift: [0.1, 0.03, -0.12], flash: true,
   },
   {
@@ -147,21 +152,23 @@ export const SCENES = [
     title: 'Onto the Polaroid Wall',
     text: 'Every polaroid joins the wall of happy customers who have eaten with us.',
     cam: [6.0, 1.7, -0.95], look: [7.42, 1.58, -2.2], fov: 50,
+    dof: 8, focus: 1.9,
     drift: [0.08, 0, -0.1],
   },
   {
     id: 'live', zone: 'in', kicker: 'Back of house',
     title: 'Live Cooking Station',
     text: 'Our chefs cook fresh in front of you, and waiters pick up every dish right here.',
-    cam: [0, 1.72, -15.0], look: [0.1, 1.72, -20], fov: 56,
+    cam: [-5.0, 1.8, -17.0], look: [1.6, 1.5, -19.6], fov: 62,
+    dof: 4, focus: 4.5,
     drift: [0.12, 0, -0.2],
   },
   {
     id: 'kitchen', zone: 'in', kicker: 'Back of house', glide: true,
     title: 'The Main Kitchen',
     text: 'Spotless and bright: everything is prepared on site, from fresh vegetables to marinated chicken.',
-    cam: [0, 1.75, -22.35], look: [0.25, 1.1, -26], fov: 68,
-    via: [-0.5, 1.58, -19.6],
+    cam: [4.2, 1.85, -22.2], look: [-3.0, 1.0, -25.0], fov: 66,
+    via: [-0.2, 1.6, -21.6],
     drift: [0.15, 0, -0.2],
   },
   {
