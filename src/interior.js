@@ -10,6 +10,8 @@ import { box, plane, corrugatedGeometry, InstanceBatch, pointLight, spotLight, f
 import * as T from './textures.js';
 import { LAYOUT as L } from './config.js';
 import { makeFoodKit, foodTexture } from './food.js';
+import { tableMenuTexture } from './cashier.js';
+import { FONTS } from './config.js';
 
 const TBL = L.table;                 // len 1.4 (x), wid 0.76 (z), top 0.76, seat 0.48
 const PITCH = L.dining.pitch;        // 2.3
@@ -103,7 +105,7 @@ function batches(M) {
     tissue: new InstanceBatch(new THREE.BoxGeometry(0.12, 0.08, 0.12), M.woodDark, { cast: false }),
     tongs: new InstanceBatch(new THREE.BoxGeometry(0.26, 0.008, 0.012), M.steel, { cast: false }),
     scissors: new InstanceBatch(new THREE.BoxGeometry(0.2, 0.006, 0.03), M.steel, { cast: false }),
-    menuStand: new InstanceBatch(new THREE.BoxGeometry(0.11, 0.16, 0.012), new THREE.MeshStandardMaterial({ color: '#f4ecdf', roughness: 0.6 }), { cast: false }),
+    menuStand: new InstanceBatch(new THREE.BoxGeometry(0.11, 0.16, 0.012), new THREE.MeshStandardMaterial({ map: tableMenuTexture(FONTS), roughness: 0.5 }), { cast: false }),
     trackHeads: new InstanceBatch(new THREE.CylinderGeometry(0.035, 0.045, 0.12, 10), M.blackSteel, { cast: false }),
     trackGlow: new InstanceBatch(new THREE.CircleGeometry(0.03, 10), M.bulbSoft, { cast: false, receive: false }),
   };

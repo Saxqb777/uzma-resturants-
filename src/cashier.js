@@ -22,6 +22,24 @@ export const CASHIER = {
 };
 
 let polaroidPhotos = [];   // HTMLImageElements of the AI customer photos (filled by loadPolaroidPhotos)
+const menuPhotos = {};     // dish photos for the menus, by MENU key
+const MENU_PHOTO_FILES = {
+  deal: 'menu/meal-deal', spicy_chicken: 'food/spicy-chicken', bulgogi: 'menu/beef-bulgogi', chicken_bulgogi: 'menu/chicken-bulgogi',
+  bibimbap: 'menu/bibimbap', japchae: 'menu/japchae', tteokbokki: 'menu/tteokbokki', kimchi_fried_rice: 'menu/kimchi-fried-rice',
+  fried_chicken: 'menu/korean-fried-chicken', 'Peach Iced Tea': 'menu/peach-iced-tea', 'Strawberry Milk': 'menu/strawberry-milk',
+};
+function loadImg(src) { return new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+async function loadMenuPhotos() {
+  await Promise.all(Object.entries(MENU_PHOTO_FILES).map(async ([k, f]) => { const im = await loadImg(`assets/ai/${f}.jpg`); if (im) menuPhotos[k] = im; }));
+}
+// round-cornered photo helper for menus
+function photo(c, im, x, y, w, h, r = 14) {
+  if (!im) return;
+  const s = Math.max(w / im.width, h / im.height);
+  c.save(); c.beginPath(); c.roundRect(x, y, w, h, r); c.clip();
+  c.drawImage(im, x + (w - im.width * s) / 2, y + (h - im.height * s) / 2, im.width * s, im.height * s);
+  c.restore();
+}
 
 export async function loadPolaroidPhotos() {
   let files = [];
@@ -36,6 +54,7 @@ export async function loadPolaroidPhotos() {
     im.src = f.startsWith('assets/') ? f : `assets/ai/${f.replace(/^\.?\//, '')}`;
   })));
   polaroidPhotos = imgs.filter(Boolean);
+  await loadMenuPhotos();
   return polaroidPhotos.length;
 }
 
@@ -422,14 +441,17 @@ export function menuCardTexture(F, compact = false) {
       c.textAlign = 'left'; c.font = `32px ${F.round}`;
       MEAL_DEAL.items.forEach((it, i) => c.fillText(`• ${it}`, 85 + (i % 2) * 420, 370 + Math.floor(i / 2) * 50));
       c.fillStyle = '#ffe3ee'; c.fillText('+ Polaroid picture AED 5', 85, 520);
+      photo(c, menuPhotos.deal, w - 300, 330, 200, 150, 18);
       // mains
       let y = 620;
       c.fillStyle = '#c23b6a'; c.font = `46px ${F.round}`; c.fillText('MAINS · 메인', 60, y); y += 20;
-      for (const [en, ko, price] of MENU.mains.slice(1)) {
+      for (const [en, ko, price, key] of MENU.mains.slice(1)) {
         y += 66;
-        c.fillStyle = '#3b2a33'; c.font = `38px ${F.round}`; c.textAlign = 'left'; c.fillText(en, 60, y);
+        const tx = menuPhotos[key] ? 128 : 60;
+        photo(c, menuPhotos[key], 60, y - 44, 56, 56, 28);
+        c.fillStyle = '#3b2a33'; c.font = `38px ${F.round}`; c.textAlign = 'left'; c.fillText(en, tx, y);
         const tw = c.measureText(en).width;
-        c.fillStyle = '#9a7d88'; c.font = `30px ${F.cute}`; c.fillText(ko, 72 + tw, y);
+        c.fillStyle = '#9a7d88'; c.font = `30px ${F.cute}`; c.fillText(ko, tx + 12 + tw, y);
         c.fillStyle = '#2f8f8a'; c.font = `38px ${F.round}`; c.textAlign = 'right'; c.fillText(`AED ${price}`, w - 60, y);
         c.strokeStyle = 'rgba(47,143,138,0.25)'; c.setLineDash([4, 8]); c.beginPath(); c.moveTo(60, y + 16); c.lineTo(w - 60, y + 16); c.stroke(); c.setLineDash([]);
       }
@@ -446,6 +468,24 @@ export function menuCardTexture(F, compact = false) {
         c.textAlign = 'center'; c.fillStyle = '#9a7d88'; c.font = `30px ${F.round}`;
         c.fillText('All chicken & beef · No pork · No alcohol', w / 2, h - 60);
       }
+    },
+  });
+}
+
+// Small table-tent menu for every table: the meal deal up front
+export function tableMenuTexture(F) {
+  return T.sign({
+    w: 512, h: 740, bg: '#fff6ef', border: '#2f8f8a', borderW: 12, aged: 0.05, seed: 23,
+    fonts: [{ font: F.neon, text: 'Seoulicious' }, { font: F.round, text: MEAL_DEAL.items.join(' ') + ' MEAL DEAL AED 59 Polaroid picture 5 Scan for the full menu' }, { font: F.cute, text: '메뉴' }],
+    draw: (c, w) => {
+      c.fillStyle = '#f2a7c3'; c.fillRect(12, 12, w - 24, 120);
+      c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = `64px ${F.neon}`; c.fillText('Seoulicious', w / 2, 92);
+      photo(c, menuPhotos.deal, 40, 150, w - 80, 250, 20);
+      c.fillStyle = '#c23b6a'; c.font = `38px ${F.round}`; c.fillText('MEAL DEAL', w / 2, 452);
+      c.fillStyle = '#2f8f8a'; c.font = `bold 72px ${F.round}`; c.fillText(MEAL_DEAL.price, w / 2, 528);
+      c.fillStyle = '#3b2a33'; c.font = `24px ${F.round}`;
+      MEAL_DEAL.items.forEach((it, i) => c.fillText(it, w / 2, 572 + i * 30));
+      c.fillStyle = '#e889ab'; c.font = `22px ${F.round}`; c.fillText('+ Polaroid picture AED 5 · scan for the full menu', w / 2, 724);
     },
   });
 }
