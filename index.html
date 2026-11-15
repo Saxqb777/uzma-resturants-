@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>UZMA Korean BBQ</title>
+<title>Seoulicious Korean BBQ</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;600&family=Nanum+Brush+Script&family=Nanum+Pen+Script&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Fredoka:wght@400;600&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;600&family=Jua&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Kufi+Arabic:wght@500;800&family=Pacifico&display=swap">
 <style>
   /* One dark, warm look on purpose: the page is a night-time restaurant.
      Layout: full-bleed 3D view; caption "sign plate" bottom-left, controls bottom-right. */
@@ -40,6 +40,7 @@
   #stage { position: fixed; inset: 0; }
   #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
   #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+  #flash { position: fixed; inset: 0; background: #fffdf6; opacity: 0; pointer-events: none; }
 
   .ui { position: fixed; inset: 0; pointer-events: none; transition: opacity .4s ease; }
   .ui.hidden { opacity: 0; }
@@ -166,9 +167,10 @@
 <div id="stage"></div>
 <div id="labels" class="off" aria-hidden="true"></div>
 <div id="fade"></div>
+<div id="flash" aria-hidden="true"></div>
 
 <div class="ui" id="ui">
-  <div class="brand"><b id="brandKo">우즈마</b><span id="brandEn">UZMA · Korean BBQ</span></div>
+  <div class="brand"><b id="brandKo">Seoulicious</b><span id="brandEn">Korean BBQ · Abu Dhabi</span></div>
 
   <div class="hint" id="hint">
     <span><kbd>Enter</kbd> next</span>
@@ -222,8 +224,8 @@
 
 <div id="loader">
   <div class="box">
-    <div class="ko">우즈마</div>
-    <div class="en">UZMA · KOREAN BBQ</div>
+    <div class="ko">Seoulicious</div>
+    <div class="en">KOREAN BBQ · سيوليشس</div>
     <div class="bar"><i id="loadBar"></i></div>
     <div class="msg" id="loadMsg">Lighting the grill…</div>
     <button id="startBtn" class="primary" hidden>Start the tour</button>

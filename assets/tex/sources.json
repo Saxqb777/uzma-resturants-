@@ -1,0 +1,304 @@
+{
+ "note": "All textures CC0. PH = Poly Haven (polyhaven.com/a/<id>), ACG = ambientCG (ambientcg.com/a/<id>).",
+ "sets": {
+  "wood_booth": {
+   "source": "PH wood_planks",
+   "license": "CC0",
+   "tileMeters": [
+    1.5,
+    1.5
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "wood_dark": {
+   "source": "PH dark_wood (colour-graded to dark stained brown)",
+   "license": "CC0",
+   "tileMeters": [
+    2.0,
+    2.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "wood_oak": {
+   "source": "PH oak_wood_planks (slightly desaturated)",
+   "license": "CC0",
+   "tileMeters": [
+    1.2,
+    1.2
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "wood_ext": {
+   "source": "PH weathered_plank_siding",
+   "license": "CC0",
+   "tileMeters": [
+    1.57,
+    1.57
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "wood_deck": {
+   "source": "PH old_wood_floor",
+   "license": "CC0",
+   "tileMeters": [
+    3.0,
+    3.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "plaster": {
+   "source": "PH plastered_wall",
+   "license": "CC0",
+   "tileMeters": [
+    2.0,
+    2.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "plaster_grey": {
+   "source": "PH plaster_grey_04 (desaturated)",
+   "license": "CC0",
+   "tileMeters": [
+    1.5,
+    1.5
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "concrete": {
+   "source": "PH concrete_floor_worn_001",
+   "license": "CC0",
+   "tileMeters": [
+    3.0,
+    3.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "subway": {
+   "source": "PH long_white_tiles",
+   "license": "CC0",
+   "tileMeters": [
+    1.27,
+    1.27
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "floor_slate": {
+   "source": "PH granite_tile (2k diffuse+normal)",
+   "license": "CC0",
+   "tileMeters": [
+    2.3,
+    2.3
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "brick": {
+   "source": "PH red_brick_03",
+   "license": "CC0",
+   "tileMeters": [
+    1.0,
+    1.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "pavers": {
+   "source": "PH concrete_pavers",
+   "license": "CC0",
+   "tileMeters": [
+    1.92,
+    1.92
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "asphalt": {
+   "source": "PH asphalt_02",
+   "license": "CC0",
+   "tileMeters": [
+    3.0,
+    3.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "tin_rust": {
+   "source": "PH rusty_corrugated_iron",
+   "license": "CC0",
+   "tileMeters": [
+    2.0,
+    2.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "tin_galv": {
+   "source": "PH rusty_metal_02 (metalness derived from rust mask)",
+   "license": "CC0",
+   "tileMeters": [
+    1.0,
+    1.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "leather": {
+   "source": "PH leather_white (neutralised to grey, tinted per material)",
+   "license": "CC0",
+   "tileMeters": [
+    0.3,
+    0.3
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "tile_white": {
+   "source": "ACG Tiles107",
+   "license": "CC0",
+   "tileMeters": [
+    1.0,
+    1.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "tile_red": {
+   "source": "ACG Tiles036 (tile faces recoloured deep red)",
+   "license": "CC0",
+   "tileMeters": [
+    0.8,
+    0.8
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "kitchen_floor": {
+   "source": "ACG Tiles038 (photogrammetry)",
+   "license": "CC0",
+   "tileMeters": [
+    1.1,
+    0.55
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "steel_brushed": {
+   "source": "ACG Metal009",
+   "license": "CC0",
+   "tileMeters": [
+    1.0,
+    1.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "metal_black": {
+   "source": "ACG Metal028 (metalness zeroed: powder coat is paint)",
+   "license": "CC0",
+   "tileMeters": [
+    1.0,
+    1.0
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "terrazzo": {
+   "source": "ACG Terrazzo009",
+   "license": "CC0",
+   "tileMeters": [
+    0.6,
+    0.6
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  },
+  "cork": {
+   "source": "ACG Cork004 (slightly desaturated)",
+   "license": "CC0",
+   "tileMeters": [
+    0.5,
+    0.5
+   ],
+   "files": [
+    "diff.jpg (sRGB)",
+    "nor.jpg (OpenGL)",
+    "arm.jpg (R=AO G=rough B=metal)"
+   ]
+  }
+ }
+}

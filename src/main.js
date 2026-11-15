@@ -11,6 +11,10 @@ import { RESTAURANT, FONTS, LAYOUT, SCENES } from './config.js';
 import { buildMaterials } from './materials.js';
 import { setMaxAnisotropy, refreshSignFonts, skyTexture } from './textures.js';
 import { buildInterior } from './interior.js';
+import { loadFoodTextures } from './food.js';
+import { buildCashier, loadPolaroidPhotos } from './cashier.js';
+import { buildKitchen } from './kitchen.js';
+import { buildDecor, loadArt } from './decor.js';
 import { buildExterior } from './exterior.js';
 import { Director } from './director.js';
 import { Spectator } from './spectator.js';
@@ -37,7 +41,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;   // the room is static: draw shadows once
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.25;
 $('stage').appendChild(renderer.domElement);
 renderer.domElement.tabIndex = 0;
 setMaxAnisotropy(Math.min(8, renderer.capabilities.getMaxAnisotropy()));
@@ -103,15 +107,26 @@ roof.name = 'roof';
 scene.add(roof);
 const animators = [];
 const hemi = new THREE.HemisphereLight('#3a4a6a', '#1a120c', 0.55);
+const HEMI = {
+  in: { i: 1.15, sky: new THREE.Color('#ffe0c0'), ground: new THREE.Color('#5a3e2c') },
+  out: { i: 0.6, sky: new THREE.Color('#4a5878'), ground: new THREE.Color('#2a1c14') },
+  top: { i: 1.8, sky: new THREE.Color('#fff0dc'), ground: new THREE.Color('#6a5040') },
+};
 const zones = new ZoneLights(scene, camera);
 
 async function build() {
   await step(8, 'Lighting the grill…');
-  const mats = buildMaterials();
-  scene.environment = makeEnvironment();
+  const mats = await buildMaterials(renderer);
+  if (!scene.environment) scene.environment = makeEnvironment();
+  await loadFoodTextures();
   await step(35, 'Setting the tables…');
-  const ctx = { scene, camera, mats, roof, animators, layout: LAYOUT, R: RESTAURANT, F: FONTS };
+  const ctx = { scene, camera, renderer, mats, roof, animators, layout: LAYOUT, R: RESTAURANT, F: FONTS };
   buildInterior(ctx);
+  await loadPolaroidPhotos();
+  buildCashier(ctx);
+  buildKitchen(ctx);
+  await loadArt();
+  buildDecor(ctx);
   await step(60, 'Hanging the signs…');
   buildExterior(ctx);
   scene.add(hemi);
@@ -157,8 +172,8 @@ async function preload() {
 const ui = $('ui'), caption = $('caption'), lookpanel = $('lookpanel'), hint = $('hint');
 const btnPrev = $('prev'), btnNext = $('next'), btnLook = $('look'), btnFull = $('full'), btnQuality = $('quality');
 const dots = $('dots');
-$('brandKo').textContent = RESTAURANT.nameKo;
-$('brandEn').textContent = `${RESTAURANT.nameEn} · ${RESTAURANT.kind}`;
+$('brandKo').textContent = RESTAURANT.name;
+$('brandEn').textContent = `${RESTAURANT.kind} · ${RESTAURANT.city}`;
 
 let mode = 'tour';
 let roofOn = true;
@@ -166,8 +181,17 @@ let roofOn = true;
 const director = new Director(camera, SCENES, {
   fadeEl: $('fade'),
   reducedMotion,
-  onChange: (i) => showCaption(i),
+  onChange: (i) => { showCaption(i); story.onScene?.(SCENES[i], i); },
 });
+// Scene-specific "story" (photographer position, flash, new polaroid). Filled in by the crowd module.
+const story = {};
+function cameraFlash() {
+  const f = $('flash');
+  if (!f || reducedMotion) return;
+  f.style.transition = 'none'; f.style.opacity = '0.95';
+  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = 'opacity 0.9s ease-out'; f.style.opacity = '0'; }));
+}
+director.onArrive = (i) => { if (SCENES[i].flash) cameraFlash(); story.onArrive?.(SCENES[i], i); };
 const spectator = new Spectator(camera, renderer.domElement, scene);
 
 SCENES.forEach((s, i) => {
@@ -219,7 +243,8 @@ function showCaption(i) {
     $('capNum').textContent = `${String(i + 1).padStart(2, '0')} / ${total}`;
     $('capKicker').textContent = s.kicker;
     $('capTitle').textContent = s.title;
-    $('capText').textContent = s.text;
+    $('capText').textContent = s.text || '';
+    $('capText').hidden = !s.text;
     caption.classList.remove('swap');
   }, reducedMotion ? 0 : 280);
 }
@@ -313,7 +338,12 @@ function frame() {
   else spectator.update(dt);
   const above = camera.position.y > LAYOUT.slabTop + 3;
   roof.visible = mode === 'tour' ? !director.cutaway : roofOn && !above;
-  hemi.intensity += ((roof.visible ? 0.55 : 1.5) - hemi.intensity) * Math.min(1, dt * 3);
+  // ambient fill follows where the camera is: warm inside, cool night outside, bright for the floor plan
+  const zoneNow = zones.zoneOf(camera.position);
+  const want = !roof.visible ? HEMI.top : zoneNow === 'in' ? HEMI.in : HEMI.out;
+  const k = Math.min(1, dt * 3);
+  hemi.intensity += (want.i - hemi.intensity) * k;
+  hemi.color.lerp(want.sky, k); hemi.groundColor.lerp(want.ground, k);
   zones.update(dt);
   grade.uniforms.time.value = t;
   composer.render();

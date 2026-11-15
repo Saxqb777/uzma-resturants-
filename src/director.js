@@ -114,7 +114,7 @@ export class Director {
       this.camera.up.copy(a.startUp).lerp(V(a.to.up || UP), k).normalize();
       this.look.copy(l);
       this.apply(p, l, f);
-      if (a.t >= a.dur) { this.anim = null; this.snapTo(a.to); }
+      if (a.t >= a.dur) { this.anim = null; this.snapTo(a.to); this.onArrive?.(this.index); }
       return;
     }
     if (a && a.type === 'fade') {
@@ -123,7 +123,7 @@ export class Director {
       const o = a.t < half ? a.t / half : Math.max(0, 1 - (a.t - half) / half);
       this.fadeEl.style.opacity = String(Math.min(1, o));
       if (!a.switched && a.t >= half) { a.switched = true; this.snapTo(a.to); }
-      if (a.t >= a.dur) { this.anim = null; this.fadeEl.style.opacity = '0'; }
+      if (a.t >= a.dur) { this.anim = null; this.fadeEl.style.opacity = '0'; this.onArrive?.(this.index); }
       if (!a.switched) return;
     }
     // slow drift while resting on a shot, like a camera on a slider

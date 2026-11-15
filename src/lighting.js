@@ -6,7 +6,7 @@
 // during loading, so switching never stalls on shader compiles.
 import * as THREE from 'three';
 
-const FOOTPRINT = { x0: -5.3, x1: 5.3, z0: -18.5, z1: 0.35, yTop: 4.4 };
+const FOOTPRINT = { x0: -7.8, x1: 7.8, z0: -27.3, z1: 0.35, yTop: 4.4 };
 const STREET_VISIBLE_Z = -7.5;   // interior lights in front of this line are seen through the windows
 const FADE = 0.6;
 

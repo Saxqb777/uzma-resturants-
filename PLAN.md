@@ -26,6 +26,44 @@ This file is the project's memory. Any new chat should read it first.
   - 8 tour scenes, look-around mode, floor-plan view.
   - No people yet.
 
+## v1 — client feedback (Nov 15) → decisions
+- **Name:** Seoulicious, English + Arabic سيوليشس on all signs. No Korean shop name.
+- **Location:** Abu Dhabi. Prices in AED.
+- **Food rules:** no alcohol anywhere. No pork: chicken and beef only.
+- **Signs:** English + Korean so everyone understands.
+- **Meal deal (offer boards, menus, grill table):** AED 59.
+  - Includes spicy chicken BBQ, steamed rice, kimchi, cucumber salad and signature sauce.
+  - Optional polaroid: AED 5.
+- **Layout:** 30 booths of 4. Building 15 m × 27 m, symmetric, wide aisles.
+  - Booths have cushions and wooden armrests.
+- **Front zone:** photo-spot mural wall (left), entrance, cute pink/teal cashier (right).
+  - Polaroid wall behind the cashier.
+  - Separated 2-seat nook by the window.
+- **Back of house:** live cooking station (head chef, sous chef, 2 assistants, waiter pickup).
+  - Behind it, a clean white main kitchen: fridges, microwave, prep, staff.
+- **Realism, "no AI slop":**
+  - Photo-scanned CC0 textures and plants (Poly Haven).
+  - Realistic rigged people (Microsoft Rocketbox, MIT license).
+  - Higgsfield AI for photos and poster art only. All lettering is drawn by code.
+- **Higgsfield budget:** account had 69 credits.
+  - Images 0.25 cr each.
+  - 3D models 9 cr each (Tripo), saved for hero food only.
+- **Slides (12):**
+  1. Street
+  2. Offer-board zoom
+  3. Entrance (title only)
+  4. Inside
+  5. Booths
+  6. Grill table (meal deal + polaroid)
+  7. Cashier
+  8. Polaroid taken (flash)
+  9. Polaroid pinned (the print is a real render of that table)
+  10. Live cooking station
+  11. Main kitchen
+  12. Floor plan
+- **Still waiting on her:** real menu items + prices (placeholders in `src/config.js` → `MENU`).
+- **Staff names:** Korean name tags, editable in `config.js` → `STAFF`.
+
 ## Next (to discuss after she sees v0)
 - **v1:** staff (host at the counter, cooks in the kitchen, a server in the aisle) and people eating at a few tables.
   - Simple stylized figures, with idle animation.
@@ -45,7 +83,13 @@ This file is the project's memory. Any new chat should read it first.
 
 ## How to edit
 - **Name, sign words, scene titles and text, camera spots:** `src/config.js`.
-- **Inside:** `src/interior.js`.
+- **Inside:**
+  - `src/interior.js`: shell, booths, tables.
+  - `src/cashier.js`: cashier corner + polaroid wall.
+  - `src/kitchen.js`: live station + main kitchen.
+  - `src/decor.js`: posters, neon, signs, greenery.
+  - `src/crowd.js`: people + polaroid story.
+  - `src/food.js`: dishes.
 - **Outside:** `src/exterior.js`.
 - **Colors and materials:** `src/materials.js`.
 - **Procedural textures and signs:** `src/textures.js`.

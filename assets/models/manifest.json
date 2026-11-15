@@ -1,0 +1,394 @@
+[
+ {
+  "id": "plant_floor_pedestal",
+  "file": "assets/models/plant_floor_pedestal.glb",
+  "kind": "plant-floor",
+  "approxSize": [
+   0.587,
+   1.336,
+   0.634
+  ],
+  "pivot": "base",
+  "notes": "Leafy shrub in a weathered terracotta pedestal bowl. Floor plant for corners/entrance.",
+  "source": "https://polyhaven.com/a/potted_plant_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_heartleaf",
+  "file": "assets/models/plant_heartleaf.glb",
+  "kind": "plant-floor",
+  "approxSize": [
+   0.701,
+   0.841,
+   0.657
+  ],
+  "pivot": "base",
+  "notes": "Variegated heart-leaf (caladium/pothos look) in terracotta pot. Low floor plant, or on a counter/shelf end.",
+  "source": "https://polyhaven.com/a/potted_plant_02",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_succulent",
+  "file": "assets/models/plant_succulent.glb",
+  "kind": "plant-table",
+  "approxSize": [
+   0.168,
+   0.267,
+   0.185
+  ],
+  "pivot": "base",
+  "notes": "Zebra haworthia in a small white pot. Tabletop / cashier counter / shelf.",
+  "source": "https://polyhaven.com/a/potted_plant_04",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_money_tree",
+  "file": "assets/models/plant_money_tree.glb",
+  "kind": "plant-floor",
+  "approxSize": [
+   0.865,
+   1.881,
+   0.818
+  ],
+  "pivot": "base",
+  "notes": "Pachira (money tree) kit-bashed into Poly Haven planter_pot_clay (x1.9) + soil disc. Tall floor plant.",
+  "source": "https://polyhaven.com/a/pachira_aquatica_01 + https://polyhaven.com/a/planter_pot_clay",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_money_tree_small",
+  "file": "assets/models/plant_money_tree_small.glb",
+  "kind": "plant-floor",
+  "approxSize": [
+   0.829,
+   1.223,
+   0.785
+  ],
+  "pivot": "base",
+  "notes": "Smaller pachira in clay pot (x1.45). Medium floor plant / next to booths.",
+  "source": "https://polyhaven.com/a/pachira_aquatica_01 + https://polyhaven.com/a/planter_pot_clay",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_calathea_pot",
+  "file": "assets/models/plant_calathea_pot.glb",
+  "kind": "plant-table",
+  "approxSize": [
+   0.601,
+   0.68,
+   0.526
+  ],
+  "pivot": "base",
+  "notes": "Calathea orbifolia clump in clay pot (x1.45). Shelf / counter / low floor plant.",
+  "source": "https://polyhaven.com/a/calathea_orbifolia_01 + https://polyhaven.com/a/planter_pot_clay",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_fern_hanging",
+  "file": "assets/models/plant_fern_hanging.glb",
+  "kind": "plant-hanging",
+  "approxSize": [
+   0.99,
+   0.646,
+   0.894
+  ],
+  "pivot": "base",
+  "notes": "Fern in clay pot (x1.25); fronds arch out ~1 m wide. Hang from the ceiling with 3 cords to the rim (rim height = ~0.27 m) or set on a high shelf.",
+  "source": "https://polyhaven.com/a/fern_02 + https://polyhaven.com/a/planter_pot_clay",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "plant_fern_clump",
+  "file": "assets/models/plant_fern_clump.glb",
+  "kind": "plant-clump",
+  "approxSize": [
+   0.874,
+   0.349,
+   0.765
+  ],
+  "pivot": "base",
+  "notes": "Pot-less fern clump: drop into planter boxes / wooden troughs, or along the base of a wall.",
+  "source": "https://polyhaven.com/a/fern_02",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "stool_pocha",
+  "file": "assets/models/stool_pocha.glb",
+  "kind": "furniture",
+  "approxSize": [
+   0.448,
+   0.458,
+   0.473
+  ],
+  "pivot": "base",
+  "notes": "Low round stool, wooden seat on rusty tube legs (classic pocha stool).",
+  "source": "https://polyhaven.com/a/metal_stool_02",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "cash_register",
+  "file": "assets/models/cash_register.glb",
+  "kind": "prop-cashier",
+  "approxSize": [
+   0.6,
+   0.621,
+   0.624
+  ],
+  "pivot": "base",
+  "notes": "Vintage cream cash register with open drawer. Front faces +Z.",
+  "source": "https://polyhaven.com/a/CashRegister_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "fire_extinguisher_kr",
+  "file": "assets/models/fire_extinguisher_kr.glb",
+  "kind": "prop",
+  "approxSize": [
+   0.28,
+   0.659,
+   0.367
+  ],
+  "pivot": "base",
+  "notes": "Korean red extinguisher on 소화기 stand.",
+  "source": "https://polyhaven.com/a/korean_fire_extinguisher_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "payphone_kr",
+  "file": "assets/models/payphone_kr.glb",
+  "kind": "prop-exterior",
+  "approxSize": [
+   0.401,
+   0.74,
+   0.301
+  ],
+  "pivot": "back",
+  "notes": "Korean public payphone (stainless). Wall-mounted: back at z=0, faces +Z; mount ~1.0 m up.",
+  "source": "https://polyhaven.com/a/korean_public_payphone_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "lpg_tank",
+  "file": "assets/models/lpg_tank.glb",
+  "kind": "prop",
+  "approxSize": [
+   0.41,
+   0.642,
+   0.409
+  ],
+  "pivot": "base",
+  "notes": "Small red LPG cylinder (gas for the table grills / kitchen).",
+  "source": "https://polyhaven.com/a/small_lpg_tank",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "chalkboard_aframe",
+  "file": "assets/models/chalkboard_aframe.glb",
+  "kind": "prop-exterior",
+  "approxSize": [
+   0.92,
+   1.509,
+   0.759
+  ],
+  "pivot": "base",
+  "notes": "A-frame menu chalkboard for the sidewalk. Board faces ±Z.",
+  "source": "https://polyhaven.com/a/standing_chalkboard_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "aircon_outdoor",
+  "file": "assets/models/aircon_outdoor.glb",
+  "kind": "prop-exterior",
+  "approxSize": [
+   0.8,
+   0.928,
+   0.374
+  ],
+  "pivot": "back",
+  "notes": "Outdoor AC condenser (clean variant) with wall bracket. Back at z=0, faces +Z.",
+  "source": "https://polyhaven.com/a/exterior_aircon_unit",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "pot_brass",
+  "file": "assets/models/pot_brass.glb",
+  "kind": "kitchen",
+  "approxSize": [
+   0.302,
+   0.291,
+   0.302
+  ],
+  "pivot": "base",
+  "notes": "Brass stock pot with lid (reads like a Korean yellow pot).",
+  "source": "https://polyhaven.com/a/brass_pot_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "cutting_board",
+  "file": "assets/models/cutting_board.glb",
+  "kind": "kitchen",
+  "approxSize": [
+   0.45,
+   0.041,
+   0.247
+  ],
+  "pivot": "base",
+  "notes": "Worn hardwood cutting board.",
+  "source": "https://polyhaven.com/a/wooden_cutting_board",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "shelf_steel_wood",
+  "file": "assets/models/shelf_steel_wood.glb",
+  "kind": "furniture",
+  "approxSize": [
+   1.097,
+   2.141,
+   0.502
+  ],
+  "pivot": "base",
+  "notes": "5-tier black steel shelf with wood boards (source was 10x scale; fixed). Storage / bottle shelf.",
+  "source": "https://polyhaven.com/a/steel_frame_shelves_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "crate_plastic",
+  "file": "assets/models/crate_plastic.glb",
+  "kind": "prop",
+  "approxSize": [
+   0.506,
+   0.254,
+   0.406
+  ],
+  "pivot": "base",
+  "notes": "Stackable vented plastic crate (orange-yellow). Beer/soju crates by the kitchen door.",
+  "source": "https://polyhaven.com/a/plastic_crate_02",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "vase_white",
+  "file": "assets/models/vase_white.glb",
+  "kind": "prop-cashier",
+  "approxSize": [
+   0.204,
+   0.4,
+   0.204
+  ],
+  "pivot": "base",
+  "notes": "Glossy white fluted vase. Cashier counter.",
+  "source": "https://polyhaven.com/a/ceramic_vase_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "wall_clock",
+  "file": "assets/models/wall_clock.glb",
+  "kind": "prop",
+  "approxSize": [
+   0.32,
+   0.32,
+   0.047
+  ],
+  "pivot": "back",
+  "notes": "Modern wall clock. Back at z=0, faces +Z.",
+  "source": "https://polyhaven.com/a/wall_clock",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "bowl_wood",
+  "file": "assets/models/bowl_wood.glb",
+  "kind": "kitchen",
+  "approxSize": [
+   0.131,
+   0.073,
+   0.125
+  ],
+  "pivot": "base",
+  "notes": "Small carved wooden bowl.",
+  "source": "https://polyhaven.com/a/wooden_bowl_02",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "storage_bin",
+  "file": "assets/models/storage_bin.glb",
+  "kind": "kitchen",
+  "approxSize": [
+   0.895,
+   0.43,
+   0.626
+  ],
+  "pivot": "base",
+  "notes": "Black storage bin with red lid. Back-of-house / under kitchen shelves.",
+  "source": "https://polyhaven.com/a/plastic_container",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "fluorescent_lights",
+  "file": "assets/models/fluorescent_lights.glb",
+  "kind": "light-fixture",
+  "approxSize": [
+   0.912,
+   0.035,
+   0.645
+  ],
+  "pivot": "top",
+  "notes": "Bank of 7 fluorescent tubes; top at y=0 for ceiling mounting. Add your own emissive/RectAreaLight.",
+  "source": "https://polyhaven.com/a/mounted_fluorescent_lights",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "ginger",
+  "file": "assets/models/ginger.glb",
+  "kind": "food",
+  "approxSize": [
+   0.24,
+   0.575,
+   0.147
+  ],
+  "pivot": "base",
+  "notes": "Ginger root (live-station produce).",
+  "source": "https://polyhaven.com/a/food_ginger_01",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "onion",
+  "file": "assets/models/onion.glb",
+  "kind": "food",
+  "approxSize": [
+   0.072,
+   0.086,
+   0.069
+  ],
+  "pivot": "base",
+  "notes": "Yellow onion.",
+  "source": "https://polyhaven.com/a/yellow_onion",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "spoon_wood",
+  "file": "assets/models/spoon_wood.glb",
+  "kind": "kitchen",
+  "approxSize": [
+   0.087,
+   0.025,
+   0.278
+  ],
+  "pivot": "base",
+  "notes": "Wooden spoon.",
+  "source": "https://polyhaven.com/a/wooden_spoon",
+  "license": "CC0 (Poly Haven)"
+ },
+ {
+  "id": "wicker_basket",
+  "file": "assets/models/wicker_basket.glb",
+  "kind": "prop",
+  "approxSize": [
+   0.383,
+   0.117,
+   0.295
+  ],
+  "pivot": "base",
+  "notes": "Low woven basket (produce at the live station, napkins at the cashier).",
+  "source": "https://polyhaven.com/a/wicker_basket_01",
+  "license": "CC0 (Poly Haven)"
+ }
+]
