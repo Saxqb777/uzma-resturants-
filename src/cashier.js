@@ -486,7 +486,7 @@ function polaroidWall(g, M) {
   const B = CASHIER.board, x = B.x;
   // cork board with a thin oak frame
   const zc = (B.z0 + B.z1) / 2, w = B.z0 - B.z1, h = B.y1 - B.y0;
-  box(g, M.cork || M.woodOak || M.woodBooth, 0.03, h, w, x - 0.015, B.y0, zc, { uv: 0.6, cast: false });
+  box(g, M.cork || M.woodOak || M.woodBooth, 0.03, h, w, x - 0.015, B.y0, zc, { uv: 1, cast: false });
   for (const [dz, dy, ww, hh] of [[0, -0.02, w + 0.08, 0.05], [0, h - 0.03, w + 0.08, 0.05]]) box(g, M.woodOak || M.woodBooth, 0.05, hh, ww, x - 0.03, B.y0 + dy, zc + dz, { cast: false });
   for (const zz of [B.z0 + 0.02, B.z1 - 0.02]) box(g, M.woodOakV || M.woodBoothV, 0.05, h + 0.04, 0.05, x - 0.03, B.y0 - 0.02, zz, { cast: false });
 

@@ -173,7 +173,7 @@ export function buildDecor(ctx) {
   neon(g, neonTexture([
     { text: '안녕하세요 · Hello · مرحبا', font: `${F.cute}, ${F.arabic}`, size: 92, glow: '#ff5fa2', core: '#ffe0ee', x: 0.5, y: 0.5 },
   ], { w: 1400, h: 220, seed: 501 }), 3.2, 0.5, 0, 3.15, -0.06, Math.PI);
-  const islandFront = L.dining.z0 + 0.12;
+  const islandFront = L.dining.z0 + 0.32;
   neon(g, neonTexture([
     { text: '맛있다!', font: F.cute, size: 150, glow: '#ff4f8b', core: '#ffe3ef', x: 0.5, y: 0.4 },
     { text: 'so delicious', font: F.neon, size: 84, glow: '#ffd35c', core: '#fff6d8', x: 0.5, y: 0.8 },

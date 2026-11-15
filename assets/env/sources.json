@@ -1,0 +1,6 @@
+{
+ "note": "All CC0 from Poly Haven. Re-encoded as RGBE .hdr; values pre-scaled so envMapIntensity 1 gives a sensible level.",
+ "warm_restaurant_1k.hdr": { "source": "https://polyhaven.com/a/warm_restaurant_night", "size": "1024x512", "processing": "saturation x0.5, exposure x0.4 (warm, dim interior reflections for the dining room)" },
+ "night_street_512.hdr": { "source": "https://polyhaven.com/a/hansaplatz", "size": "512x256", "processing": "2x box downsample, saturation x0.85, exposure x0.4 (night street, exterior)" },
+ "kitchen_white_512.hdr": { "source": "https://polyhaven.com/a/hospital_room", "size": "512x256", "processing": "2x box downsample, saturation x0.6 (clean white room for kitchen steel / tiles)" }
+}

@@ -121,29 +121,29 @@ function shell(g, M, W) {
   const depth = -L.zBack;                              // 27
   // floors: dining + front zone (dark tile), kitchen (light anti-slip tile)
   const dz = -L.kitchenZ + 0.3;
-  const dining = plane(g, M.floor, x1 - x0, dz, { uv: 1.2 });
+  const dining = plane(g, M.floor, x1 - x0, dz, { uv: 1 });
   dining.rotation.x = -Math.PI / 2; dining.position.set(0, 0, 0.3 - dz / 2);
   const kd = L.kitchen.z0 - L.zBack;
-  const kfloor = plane(g, W('kitchenFloor', 'kitchenTile'), x1 - x0, kd, { uv: 1.2 });
+  const kfloor = plane(g, W('kitchenFloor', 'kitchenTile'), x1 - x0, kd, { uv: 1 });
   kfloor.rotation.x = -Math.PI / 2; kfloor.position.set(0, 0.001, (L.kitchen.z0 + L.zBack) / 2);
 
   // side walls: plaster in the dining room, white tile in the kitchen
   const wallLen = -L.kitchen.z0;
-  box(g, W('plasterWarm', 'plaster'), wt, H, wallLen, x0 - wt / 2, 0, -wallLen / 2, { cast: false, uv: 2 });
-  box(g, W('plasterWarm', 'plaster'), wt, H, wallLen, x1 + wt / 2, 0, -wallLen / 2, { cast: false, uv: 2 });
+  box(g, W('plasterWarm', 'plaster'), wt, H, wallLen, x0 - wt / 2, 0, -wallLen / 2, { cast: false, uv: 1 });
+  box(g, W('plasterWarm', 'plaster'), wt, H, wallLen, x1 + wt / 2, 0, -wallLen / 2, { cast: false, uv: 1 });
   const kLen = L.kitchen.z0 - L.zBack;
   box(g, W('whiteTile', 'kitchenTile'), wt, H, kLen, x0 - wt / 2, 0, (L.kitchen.z0 + L.zBack) / 2, { cast: false, uv: 1 });
   box(g, W('whiteTile', 'kitchenTile'), wt, H, kLen, x1 + wt / 2, 0, (L.kitchen.z0 + L.zBack) / 2, { cast: false, uv: 1 });
   box(g, W('whiteTile', 'kitchenTile'), x1 - x0 + 2 * wt, H, wt, 0, 0, L.zBack - wt / 2, { cast: false, uv: 1 });
 
   // red glossy tile wainscot along the right dining wall (retro pocha look, her inspo)
-  box(g, W('redTile', 'subway'), 0.03, 1.15, L.dining.z0 - (L.live.counterFront) + 2.6, x1 - 0.015, 0, (L.dining.z0 + L.live.counterFront) / 2 - 0.4, { cast: false, uv: 0.6 });
+  box(g, W('redTile', 'subway'), 0.03, 1.15, L.dining.z0 - (L.live.counterFront) + 2.6, x1 - 0.015, 0, (L.dining.z0 + L.live.counterFront) / 2 - 0.4, { cast: false, uv: 1 });
   box(g, M.woodDark, 0.06, 0.05, L.dining.z0 - L.live.counterFront + 2.6, x1 - 0.03, 1.15, (L.dining.z0 + L.live.counterFront) / 2 - 0.4, { cast: false });
 
   // wall between the live station and the main kitchen: pass window + two swing doors
   const wz = L.kitchenZ - 0.1;
   const wallM = [M.plasterGrey, M.plasterGrey, M.plasterGrey, M.plasterGrey, W('plasterWarm', 'plaster'), W('whiteTile', 'kitchenTile')];
-  const seg = (a, b, y0, y1) => box(g, wallM, b - a, y1 - y0, 0.2, (a + b) / 2, y0, wz, { uv: 1.5, cast: false });
+  const seg = (a, b, y0, y1) => box(g, wallM, b - a, y1 - y0, 0.2, (a + b) / 2, y0, wz, { uv: 1, cast: false });
   const P = L.kitchen.pass, [dL, dR] = L.kitchen.doors, dw = 0.5;
   seg(x0, dL - dw, 0, H); seg(dL - dw, dL + dw, 2.2, H); seg(dL + dw, P.x0, 0, H);
   seg(P.x0, P.x1, 0, P.y0); seg(P.x0, P.x1, P.y1, H);
@@ -265,7 +265,7 @@ function tinSheet(parent, M, width, length, pivot, yaw, pitch, mat = M.tin) {
   const grp = new THREE.Group();
   grp.position.set(...pivot);
   grp.rotation.set(0, 0, pitch);
-  const m = new THREE.Mesh(corrugatedGeometry(width, length, { uv: 1.2 }), mat);
+  const m = new THREE.Mesh(corrugatedGeometry(width, length, { uv: 1 }), mat);
   m.rotation.y = yaw;
   m.castShadow = true; m.receiveShadow = true;
   grp.add(m);
@@ -309,13 +309,14 @@ function eaves(g, roof, M) {
 function tables(g, M, B, food, rnd) {
   const Y = TBL.top;
   // brushed stainless for the table tops: satin, not a mirror (a bulb hangs right above each one)
-  const top = M.steel.clone();
-  top.metalness = 0.75; top.roughness = Math.max(0.72, M.steel.roughness); top.envMapIntensity = 0.9;
-  top.color = new THREE.Color('#b9bcbf');
+  // (roughness/metalness multiply the texture's ARM map: 1.4 × ~0.47 ≈ 0.66 satin)
+  const topMat = M.steel.clone();
+  topMat.metalness = 0.8; topMat.roughness = 1.4; topMat.envMapIntensity = 0.9;
+  topMat.color = new THREE.Color('#b9bcbf');
   for (const b of BOOTHS) {
     const { x, z } = b;
     // table: stainless top, black edge band, two legs with feet
-    box(g, top, TBL.len, 0.035, TBL.wid, x, Y - 0.035, z);
+    box(g, topMat, TBL.len, 0.035, TBL.wid, x, Y - 0.035, z);
     box(g, M.blackSteel, TBL.len + 0.02, 0.05, TBL.wid + 0.02, x, Y - 0.08, z, { cast: false });
     for (const s of [-1, 1]) {
       box(g, M.blackSteel, 0.06, Y - 0.08, 0.06, x + s * 0.45, 0, z, { cast: false });

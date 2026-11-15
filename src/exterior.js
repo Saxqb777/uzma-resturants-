@@ -405,7 +405,7 @@ function lightboxDesign(R, F) {
     draw: (c) => {
       const gold = '#f5c431';
       c.strokeStyle = gold; c.lineWidth = 3; c.strokeRect(30, 30, w - 60, h - 60);
-      label(c, R.nameAr, w / 2, h * 0.078, { family: F.arabic, weight: 800, size: 140, rtl: true, color: gold, maxW: w - 100, maxH: 150 });
+      label(c, R.nameAr, w / 2, h * 0.08, { family: F.arabic, weight: 800, size: 160, rtl: true, color: gold, maxW: w - 76, maxH: 170 });
       c.fillStyle = gold; c.fillRect(56, h * 0.145, w - 112, 4);
       // stacked tall letters
       const y0 = h * 0.175, y1 = h * 0.838, cell = (y1 - y0) / word.length;
@@ -431,24 +431,36 @@ function lightboxDesign(R, F) {
   };
 }
 
-// --- the hero A-board: a printed poster in an LED snap frame (backlit, so it reads at night)
+// --- the hero A-board: a printed poster in an LED snap frame (backlit, so it reads at night).
+//     Uses the meal-deal photo when it is there (drawn in once it loads), a plain panel otherwise.
+const DEAL_PHOTO = 'assets/ai/menu/meal-deal.jpg';
+let dealPhoto = null;
+function getDealPhoto() {
+  if (!dealPhoto && typeof Image !== 'undefined') {
+    dealPhoto = new Image();
+    dealPhoto.ready = new Promise((res) => { dealPhoto.onload = res; dealPhoto.onerror = res; });
+    dealPhoto.src = DEAL_PHOTO;
+  }
+  return dealPhoto;
+}
+
 function offerDesign(R, F, deal) {
-  const w = 1024, h = 1500;
+  const w = 1024, h = 1604;
   const P = dealParts(R, deal);
   const red = '#b3261e', deep = '#7a1610', ink = '#231a14', cream = '#f7efdf', mustard = '#f2b23a';
+  const photo = getDealPhoto();
   return {
-    w, h, bg: cream, border: null, aged: 0.12, seed: 131, lines: [],
+    w, h, bg: cream, border: null, aged: 0.1, seed: 131, lines: [], image: photo,
     fonts: [
-      { font: F.display, text: `${P.kicker}${P.line1}${P.line2}${P.cur}${P.amount}${P.extraPrice}${R.name}` },
+      { font: F.display, text: `${P.kicker}${P.line1}${P.line2}${P.cur}${P.amount}${P.extraPrice}+${R.name}` },
       { font: F.sans, weight: 600, text: `WHAT'S INCLUDED OPTIONAL EXTRA ${deal.items.join('')}${P.extra}` },
       { font: F.arabic, weight: 800, text: R.nameAr },
     ],
     draw: (c) => {
-      // paper
       const r = T.rng(132);
       for (let i = 0; i < 2500; i++) { c.fillStyle = `rgba(120,90,60,${r() * 0.05})`; c.fillRect(r() * w, r() * h, 2, 2); }
       // header with soft rays
-      const H = 400;
+      const H = 330;
       c.fillStyle = red; c.fillRect(0, 0, w, H);
       c.save();
       c.beginPath(); c.rect(0, 0, w, H); c.clip();
@@ -459,85 +471,90 @@ function offerDesign(R, F, deal) {
         c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, 900, a0, a1); c.closePath(); c.fill();
       }
       c.restore();
-      c.fillStyle = mustard; c.fillRect(0, H, w, 12);
-      c.fillStyle = deep; c.fillRect(0, H + 12, w, 4);
-
-      const km = label(c, P.kicker, w / 2, 76, { family: F.display, size: 56, spacing: 14, color: '#f8dcae', maxW: 600 });
+      const km = label(c, P.kicker, w / 2, 60, { family: F.display, size: 50, spacing: 13, color: '#f8dcae', maxW: 560 });
       const kw = km.width / 2 + 26;
       c.fillStyle = 'rgba(248,220,174,0.75)';
-      c.fillRect(110, 74, w / 2 - kw - 110, 3); c.fillRect(w / 2 + kw, 74, w / 2 - kw - 110, 3);
-      const head = { family: F.display, size: 146, maxW: 820, depth: 6, step: 1.4, side: deep };
-      label(c, P.line1, w / 2, 192, { ...head, color: '#ffffff' });
-      label(c, P.line2, w / 2, 322, { ...head, color: '#ffd27a' });
+      c.fillRect(120, 58, w / 2 - kw - 120, 3); c.fillRect(w / 2 + kw, 58, w / 2 - kw - 120, 3);
+      const head = { family: F.display, size: 132, maxW: 800, depth: 6, step: 1.4, side: deep };
+      label(c, P.line1, w / 2, 160, { ...head, color: '#ffffff' });
+      label(c, P.line2, w / 2, 275, { ...head, color: '#ffd27a' });
 
-      // price tag
-      const tw = 600, th = 176, tx = (w - tw) / 2, ty = 452;
-      c.fillStyle = 'rgba(60,30,10,0.25)'; roundRect(c, tx + 6, ty + 8, tw, th, 26); c.fill();
-      c.fillStyle = mustard; roundRect(c, tx, ty, tw, th, 26); c.fill();
-      c.setLineDash([10, 8]); c.strokeStyle = 'rgba(80,40,10,0.45)'; c.lineWidth = 3;
-      roundRect(c, tx + 14, ty + 14, tw - 28, th - 28, 16); c.stroke(); c.setLineDash([]);
-      c.fillStyle = cream; c.beginPath(); c.arc(tx + 52, ty + th / 2, 15, 0, Math.PI * 2); c.fill();
-      c.strokeStyle = 'rgba(80,40,10,0.45)'; c.lineWidth = 3; c.stroke();
-      // "AED" + "59" on one baseline, centred as a group
+      // photo band
+      const py0 = H, ph = 500;
+      if (photo && photo.complete && photo.naturalWidth) {
+        const sw = photo.naturalWidth, sh = sw * (ph / w);
+        const sy = Math.min(photo.naturalHeight - sh, photo.naturalHeight * 0.07);
+        c.drawImage(photo, 0, sy, sw, sh, 0, py0, w, ph);
+        const sh2 = c.createLinearGradient(0, py0, 0, py0 + 40);
+        sh2.addColorStop(0, 'rgba(40,10,5,0.35)'); sh2.addColorStop(1, 'rgba(40,10,5,0)');
+        c.fillStyle = sh2; c.fillRect(0, py0, w, 40);
+      } else {
+        const pg = c.createRadialGradient(w / 2, py0 + ph / 2, 40, w / 2, py0 + ph / 2, w * 0.7);
+        pg.addColorStop(0, '#6b2a18'); pg.addColorStop(1, '#2a120b');
+        c.fillStyle = pg; c.fillRect(0, py0, w, ph);
+      }
+      c.fillStyle = mustard; c.fillRect(0, py0 - 2, w, 12);
+      c.fillStyle = mustard; c.fillRect(0, py0 + ph - 6, w, 12);
+
+      // price roundel overlapping the photo's lower right corner
+      const bx = 820, by = py0 + ph - 26, br = 132;
       c.save();
-      c.textBaseline = 'alphabetic'; c.textAlign = 'left'; c.letterSpacing = '0px';
-      c.font = fontSpec(176, F.display); const am = c.measureText(P.amount);
-      c.font = fontSpec(70, F.display); const cm = c.measureText(P.cur);
-      const gap = 22, total = cm.width + gap + am.width, x0 = w / 2 + 24 - total / 2;
-      const base = ty + th / 2 + am.actualBoundingBoxAscent / 2;
-      c.fillStyle = ink; c.fillText(P.cur, x0, base);
-      c.font = fontSpec(176, F.display); c.fillStyle = deep; c.fillText(P.amount, x0 + cm.width + gap, base);
+      c.translate(bx, by); c.rotate(-0.12);
+      c.fillStyle = 'rgba(30,10,5,0.35)'; c.beginPath(); c.arc(7, 9, br, 0, Math.PI * 2); c.fill();
+      c.fillStyle = mustard; c.beginPath(); c.arc(0, 0, br, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = deep; c.lineWidth = 5; c.beginPath(); c.arc(0, 0, br - 14, 0, Math.PI * 2); c.stroke();
+      label(c, P.cur, 0, -60, { family: F.display, size: 48, spacing: 6, color: ink });
+      label(c, P.amount, 0, 22, { family: F.display, size: 150, color: deep, maxW: 190 });
       c.restore();
 
       // what's included
-      const lm = label(c, "WHAT'S INCLUDED", w / 2, 690, { family: F.sans, weight: 600, size: 30, spacing: 8, color: red });
-      const lw = lm.width / 2 + 24;
-      c.fillStyle = 'rgba(35,26,20,0.25)';
-      c.fillRect(120, 689, w / 2 - lw - 120, 2); c.fillRect(w / 2 + lw, 689, w / 2 - lw - 120, 2);
+      const ly = py0 + ph + 62;
+      const lm = label(c, "WHAT'S INCLUDED", 84, ly, { family: F.sans, weight: 600, size: 30, spacing: 7, color: red, align: 'left' });
+      c.fillStyle = 'rgba(35,26,20,0.22)'; c.fillRect(84 + lm.width + 14, ly - 1, 640 - (84 + lm.width + 14), 2);
       deal.items.forEach((item, i) => {
-        const y = 774 + i * 92;
-        c.fillStyle = red; c.beginPath(); c.arc(168, y, 17, 0, Math.PI * 2); c.fill();
+        const y = ly + 78 + i * 80;
+        c.fillStyle = red; c.beginPath(); c.arc(104, y, 16, 0, Math.PI * 2); c.fill();
         c.strokeStyle = '#ffffff'; c.lineWidth = 4.5; c.lineCap = 'round'; c.lineJoin = 'round';
-        c.beginPath(); c.moveTo(160, y + 1); c.lineTo(166, y + 7); c.lineTo(177, y - 6); c.stroke();
-        label(c, item, 206, y, { family: F.sans, weight: 600, size: 50, color: ink, align: 'left', maxW: 720 });
+        c.beginPath(); c.moveTo(96, y + 1); c.lineTo(102, y + 7); c.lineTo(113, y - 6); c.stroke();
+        label(c, item, 140, y, { family: F.sans, weight: 600, size: 49, color: ink, align: 'left', maxW: 800 });
         if (i < deal.items.length - 1) {
-          c.fillStyle = 'rgba(35,26,20,0.14)';
-          for (let x = 150; x < 880; x += 14) c.fillRect(x, y + 46, 7, 2);
+          c.fillStyle = 'rgba(35,26,20,0.13)';
+          for (let x = 88; x < 940; x += 14) c.fillRect(x, y + 40, 7, 2);
         }
       });
 
       // optional extra: polaroid
-      const ey = 1222, eh = 150;
+      const ey = ly + 78 + 4 * 80 + 56, eh = 122;
       c.setLineDash([14, 10]); c.strokeStyle = red; c.lineWidth = 3.5;
-      roundRect(c, 96, ey, w - 192, eh, 20); c.stroke(); c.setLineDash([]);
+      roundRect(c, 70, ey, w - 140, eh, 18); c.stroke(); c.setLineDash([]);
       c.save();
-      c.translate(196, ey + eh / 2); c.rotate(-0.09);
-      c.fillStyle = 'rgba(40,20,10,0.25)'; c.fillRect(-50, -56, 108, 124);
-      c.fillStyle = '#ffffff'; c.fillRect(-56, -62, 108, 124);
-      c.strokeStyle = 'rgba(0,0,0,0.15)'; c.lineWidth = 2; c.strokeRect(-56, -62, 108, 124);
-      const pg = c.createLinearGradient(0, -52, 0, 36);
+      c.translate(158, ey + eh / 2); c.rotate(-0.09);
+      c.fillStyle = 'rgba(40,20,10,0.25)'; c.fillRect(-42, -46, 92, 104);
+      c.fillStyle = '#ffffff'; c.fillRect(-48, -52, 92, 104);
+      c.strokeStyle = 'rgba(0,0,0,0.15)'; c.lineWidth = 2; c.strokeRect(-48, -52, 92, 104);
+      const pg = c.createLinearGradient(0, -44, 0, 30);
       pg.addColorStop(0, '#f2b23a'); pg.addColorStop(1, '#b3261e');
-      c.fillStyle = pg; c.fillRect(-47, -53, 90, 88);
-      c.fillStyle = '#fff1c9'; c.beginPath(); c.arc(-14, -20, 13, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#5a1510'; c.beginPath(); c.moveTo(-47, 35); c.lineTo(-12, 4); c.lineTo(10, 22); c.lineTo(28, 8); c.lineTo(43, 22); c.lineTo(43, 35); c.closePath(); c.fill();
+      c.fillStyle = pg; c.fillRect(-40, -44, 76, 74);
+      c.fillStyle = '#fff1c9'; c.beginPath(); c.arc(-12, -17, 11, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#5a1510'; c.beginPath(); c.moveTo(-40, 30); c.lineTo(-10, 4); c.lineTo(8, 19); c.lineTo(24, 7); c.lineTo(36, 19); c.lineTo(36, 30); c.closePath(); c.fill();
       c.restore();
-      label(c, 'OPTIONAL EXTRA', 286, ey + 48, { family: F.sans, weight: 600, size: 26, spacing: 6, color: red, align: 'left' });
-      label(c, P.extra, 286, ey + 100, { family: F.sans, weight: 600, size: 44, color: ink, align: 'left', maxW: 380 });
-      label(c, `+ ${P.extraPrice}`, w - 128, ey + eh / 2 + 2, { family: F.display, size: 66, color: deep, align: 'right', maxW: 230 });
+      label(c, 'OPTIONAL EXTRA', 236, ey + 40, { family: F.sans, weight: 600, size: 25, spacing: 6, color: red, align: 'left' });
+      label(c, P.extra, 236, ey + 85, { family: F.sans, weight: 600, size: 44, color: ink, align: 'left', maxW: 430 });
+      label(c, `+ ${P.extraPrice}`, w - 104, ey + eh / 2 + 2, { family: F.display, size: 64, color: deep, align: 'right', maxW: 230 });
 
       // footer
-      c.fillStyle = ink; c.fillRect(0, h - 92, w, 92);
-      c.fillStyle = mustard; c.fillRect(0, h - 92, w, 5);
-      label(c, R.name, w / 2 - 34, h - 44, { family: F.display, size: 46, spacing: 2, color: cream, align: 'right' });
-      c.fillStyle = mustard; c.beginPath(); c.arc(w / 2, h - 44, 6, 0, Math.PI * 2); c.fill();
-      label(c, R.nameAr, w / 2 + 34, h - 46, { family: F.arabic, weight: 800, size: 40, color: cream, align: 'left', rtl: true });
+      c.fillStyle = ink; c.fillRect(0, h - 88, w, 88);
+      c.fillStyle = mustard; c.fillRect(0, h - 88, w, 5);
+      label(c, R.name, w / 2 - 34, h - 42, { family: F.display, size: 44, spacing: 2, color: cream, align: 'right' });
+      c.fillStyle = mustard; c.beginPath(); c.arc(w / 2, h - 42, 6, 0, Math.PI * 2); c.fill();
+      label(c, R.nameAr, w / 2 + 34, h - 44, { family: F.arabic, weight: 800, size: 38, color: cream, align: 'left', rtl: true });
     },
   };
 }
 
 // --- the second A-board: the same deal hand-lettered on a chalkboard
 function chalkDesign(R, F, deal) {
-  const w = 1024, h = 1500;
+  const w = 1024, h = 1604;
   const P = dealParts(R, deal);
   const kind = (P.kicker || R.kind).toLowerCase().replace(/(^|\s)\S/g, (s) => s.toUpperCase()).replace(/bbq/i, 'BBQ');
   return {
@@ -565,15 +582,15 @@ function chalkDesign(R, F, deal) {
       for (let k = 0; k < 2; k++) {
         l.beginPath(); l.ellipse(w / 2 + k * 6, 590 + k * 4, pm.width / 2 + 70 - k * 8, 118 - k * 6, -0.03 + k * 0.05, 0.1, Math.PI * 2 - 0.05); l.stroke();
       }
-      label(l, 'includes', w / 2, 772, { family: F.neon, size: 64, color: '#bfe3d0' });
-      deal.items.forEach((item, i) => label(l, item, w / 2, 860 + i * 82, { family: F.cute, size: 54, color: '#f4f1ea', maxW: 840 }));
-      label(l, `+ ${P.extra}  ${P.extraPrice}`, w / 2, 1290, { family: F.cute, size: 52, color: '#f3dc8a', maxW: 840 });
-      [[120, 160, 18], [905, 110, 14], [130, 1180, 14], [890, 1300, 18], [880, 720, 12]].forEach(([x, y, s]) => {
+      label(l, 'includes', w / 2, 790, { family: F.neon, size: 64, color: '#bfe3d0' });
+      deal.items.forEach((item, i) => label(l, item, w / 2, 886 + i * 88, { family: F.cute, size: 56, color: '#f4f1ea', maxW: 840 }));
+      label(l, `+ ${P.extra}  ${P.extraPrice}`, w / 2, 1366, { family: F.cute, size: 54, color: '#f3dc8a', maxW: 840 });
+      [[120, 160, 18], [905, 110, 14], [120, 1250, 14], [900, 1440, 18], [880, 740, 12]].forEach(([x, y, s]) => {
         l.strokeStyle = 'rgba(243,220,138,0.9)'; l.lineWidth = 3; l.beginPath();
         for (let k = 0; k < 5; k++) { const a = (k * 4 * Math.PI) / 5 - Math.PI / 2; l.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s); }
         l.closePath(); l.stroke();
       });
-      label(l, R.name, w / 2, 1418, { family: F.neon, size: 64, color: '#f4f1ea' });
+      label(l, R.name, w / 2, 1500, { family: F.neon, size: 64, color: '#f4f1ea' });
       // chalk: punch tiny holes, soften slightly
       l.globalCompositeOperation = 'destination-out';
       for (let i = 0; i < 15000; i++) { l.fillStyle = `rgba(0,0,0,${0.2 + r() * 0.45})`; l.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 1.5); }
@@ -618,7 +635,7 @@ function lanternDesign(R, F) {
     draw: (c) => {
       c.fillStyle = '#c8322b'; c.fillRect(0, 0, w, h * 0.2); c.fillRect(0, h * 0.8, w, h * 0.2);
       c.fillStyle = '#2f5f9a'; c.fillRect(0, h * 0.2, w, h * 0.05); c.fillRect(0, h * 0.75, w, h * 0.05);
-      for (const u of [0.25, 0.75]) label(c, R.name, w * u, h * 0.5, { family: F.display, size: 76, color: '#c8322b', maxW: w * 0.36 });
+      for (const u of [0.25, 0.75]) label(c, R.name, w * u, h * 0.5, { family: F.display, size: 72, color: '#c8322b', maxW: w * 0.3 });
     },
   };
 }
@@ -656,6 +673,26 @@ function laundryDesign(F) {
       c.restore();
     },
   };
+}
+
+// What you see through the laundry's window: cool light, a row of washers under a row of dryers (no text)
+function laundryInterior() {
+  const [c, x] = T.makeCanvas(512, 272);
+  const gr = x.createLinearGradient(0, 0, 0, 272);
+  gr.addColorStop(0, '#cfe3f2'); gr.addColorStop(0.6, '#9db8cc'); gr.addColorStop(1, '#4d5d6a');
+  x.fillStyle = gr; x.fillRect(0, 0, 512, 272);
+  x.fillStyle = 'rgba(255,255,255,0.8)';
+  for (const lx of [90, 256, 422]) x.fillRect(lx - 50, 6, 100, 6);              // ceiling tubes
+  const unit = (ux, uy, w, h) => {
+    x.fillStyle = '#e9edf0'; x.fillRect(ux, uy, w, h);
+    x.fillStyle = '#b9c2c8'; x.fillRect(ux, uy, w, 8);
+    x.fillStyle = '#2b3a46'; x.beginPath(); x.arc(ux + w / 2, uy + h * 0.58, w * 0.3, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#8f9aa2'; x.lineWidth = 4; x.stroke();
+    x.fillStyle = 'rgba(160,200,230,0.5)'; x.beginPath(); x.arc(ux + w / 2 - 6, uy + h * 0.52, w * 0.12, 0, Math.PI * 2); x.fill();
+  };
+  for (let i = 0; i < 7; i++) { unit(20 + i * 70, 150, 62, 84); unit(20 + i * 70, 66, 62, 76); }
+  x.fillStyle = '#3a3f44'; x.fillRect(0, 236, 512, 36);                          // counter / floor
+  return c;
 }
 
 // Light pools painted onto the billboard (a light map): flood lamps below, eave downlight scallops above
@@ -770,7 +807,7 @@ function buildDoor(S) {
   box(root, lm.doorMetal, xi * 2, jamb, 0.11, 0, D.h - jamb, zD);
   box(root, lm.brass, xi * 2, 0.012, 0.16, 0, 0, zD + 0.01, { cast: false });
 
-  const pullMat = (tex) => new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.04, depthWrite: false, roughness: 0.5, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.25 });
+  const pullMat = (tex) => new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.04, depthWrite: false, roughness: 0.5, emissive: '#ffffff', emissiveMap: tex, emissiveIntensity: 0.45 });
   const pullM = pullMat(T.sign(designs.pull));
   const pushM = pullMat(T.sign(designs.push));
   const welcomeM = signMaterial(T.sign(designs.welcome), { glow: 0.22 });
@@ -828,7 +865,7 @@ function buildDoor(S) {
     const doorC = new THREE.Vector3(0, 1.2, zD);
     const prev = camera.position.clone();
     let speed = 0, open = 0;
-    const OPEN = 1.5;   // ~86°: the open leaves stand at |x| > 0.58, clear of the glide path
+    const OPEN = 1.56;  // ~89°: open leaves (incl. the inside pull bars) stay at |x| > 0.56, clear of the glide path
     animators.push((time, dt) => {
       const p = camera.position;
       const moved = p.distanceTo(prev);
@@ -1056,9 +1093,9 @@ function buildLampsAndLantern(S) {
     g.add(lamp);
   }
   // the barn lamps' warm pools on the ledges, steps and sidewalk (left one casts the shadows)
-  const [xa, xb] = [S.barnXs[1], S.barnXs[2]];
+  const xa = S.barnXs[1], xb = (S.barnXs[2] + S.barnXs[3]) / 2;
   spotLight(g, '#ffc382', 30, 10, [xa, shadeY - 0.12, lampZ], [xa - 0.4, L.sidewalkY, lampZ + 1.7], { angle: 1.05, penumbra: 0.8, shadow: true, mapSize: 1024 });
-  spotLight(g, '#ffc382', 26, 10, [xb, shadeY - 0.12, lampZ], [xb + 0.4, L.sidewalkY, lampZ + 1.7], { angle: 1.05, penumbra: 0.8 });
+  spotLight(g, '#ffc382', 36, 10, [xb, shadeY - 0.1, lampZ], [xb - 0.2, L.sidewalkY, lampZ + 1.5], { angle: 1.2, penumbra: 0.85 });
 
   // caged wall lamps on both piers beside the door
   const pierX = (L.door.x1 + L.sideWindow.x0) / 2;
@@ -1093,7 +1130,7 @@ function buildLampsAndLantern(S) {
   const body = new THREE.Mesh(new THREE.LatheGeometry(
     [[0.06, -0.21], [0.13, -0.17], [0.175, -0.1], [0.19, 0], [0.175, 0.1], [0.13, 0.17], [0.06, 0.21]].map(([r, y]) => new THREE.Vector2(r, y)), 24), lanMat);
   body.position.y = -0.34;
-  body.rotation.y = Math.PI * 0.62;   // one "Seoulicious" faces the street, turned a little toward the entrance view
+  body.rotation.y = Math.PI / 2 + 0.15;   // one "Seoulicious" faces the street, turned a touch toward the entrance view
   pivot.add(body);
   [0.215, -0.215].forEach((dy) => {
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.035, 14), mats.blackSteel);
@@ -1101,7 +1138,7 @@ function buildLampsAndLantern(S) {
   });
   const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.02, 0.14, 8), mats.redPaint);
   tassel.position.y = -0.64; pivot.add(tassel);
-  const lanLight = pointLight(pivot, '#ffb07a', 3.2, 4.5, 0, -0.34, 0.05);
+  const lanLight = pointLight(pivot, '#ffb07a', 4, 5, 0, -0.34, 0.05);
   animators.push((t) => {
     pivot.rotation.z = Math.sin(t * 1.3) * 0.05;
     pivot.rotation.x = Math.sin(t * 0.9 + 1) * 0.035;
@@ -1143,28 +1180,28 @@ function buildGreenery(S) {
       [xOut + sgn * 0.2, ledge + 0.18, zOut + 0.12], [xo, ledge + 0.45, z], [xo + sgn * 0.015, ledge + 0.9, z],
       [xo - sgn * 0.01, ledge + 1.35, z], [xo, topY - 0.15, z], [xOut + sgn * 0.2, topY, z],
       [xOut + sgn * reach * 0.55, topY + 0.02, z], [xOut + sgn * reach, topY - 0.01, z],
-    ], { seed: seed + 1, size: 0.05 });
+    ], { seed: seed + 1, size: 0.058, every: 0.036 });
     // second, thinner strand from the same planter
     vine(S, [
       [xOut + sgn * 0.3, ledge + 0.18, zOut + 0.12], [xo + sgn * 0.03, ledge + 0.55, z + 0.01], [xo - sgn * 0.02, ledge + 1.0, z + 0.01],
       [xo + sgn * 0.02, ledge + 1.3, z + 0.01],
-    ], { seed: seed + 2, size: 0.042 });
+    ], { seed: seed + 2, size: 0.05 });
     // trailing strands hanging from the top run, over the corner of the glass
     for (const [u, drop, sd] of [[0.35, 0.42, 4], [0.75, 0.26, 5], [1.12, 0.34, 6]]) {
       if (u > reach - 0.1) continue;
       const x = xOut + sgn * u;
       vine(S, [[x, topY, z], [x + sgn * 0.02, topY - drop * 0.5, z + 0.02], [x - sgn * 0.01, topY - drop, z + 0.03]],
-        { seed: seed + sd, size: 0.04, hang: true, every: 0.035 });
+        { seed: seed + sd, size: 0.048, hang: true, every: 0.032 });
     }
     // small vine up the inner casing (by the door)
     const xi = xIn + sgn * 0.04;
     vine(S, [
       [xIn - sgn * 0.2, ledge + 0.18, zOut + 0.12], [xi, ledge + 0.4, z], [xi - sgn * 0.01, ledge + 0.75, z], [xi + sgn * 0.01, ledge + 1.05, z],
-    ], { seed: seed + 7, size: 0.045 });
+    ], { seed: seed + 7, size: 0.052 });
     // trailing over the front lip of the ledge from both planters
     for (const [x, drop, sd] of [[xOut + sgn * 0.3, 0.42, 8], [xOut + sgn * 0.6, 0.28, 9], [xIn - sgn * 0.3, 0.33, 11]]) {
       vine(S, [[x, ledge + 0.14, zOut + 0.27], [x + 0.02, ledge + 0.02, zOut + 0.41], [x - 0.02, ledge - drop, zOut + 0.42]],
-        { seed: seed + sd, size: 0.042, hang: true, every: 0.035 });
+        { seed: seed + sd, size: 0.05, hang: true, every: 0.032 });
     }
   });
   flowers.build(g);
@@ -1191,6 +1228,14 @@ function buildBoards(S) {
   const { designs } = S;
   // hero: printed poster in a black aluminium LED snap frame (backlit, reads at night)
   const offerTex = T.sign(designs.offer);
+  const photo = designs.offer.image;
+  if (photo && !(photo.complete && photo.naturalWidth)) {
+    photo.ready.then(() => {
+      if (!photo.naturalWidth) return;
+      offerTex.image = T.signTexture(designs.offer).image;
+      offerTex.needsUpdate = true;
+    });
+  }
   const offerMat = new THREE.MeshStandardMaterial({ map: offerTex, emissive: '#ffffff', emissiveMap: offerTex, emissiveIntensity: 0.55, roughness: 0.35 });
   aFrame(S, { x: -2.45, z: S.zOut + 2.4, ry: 0.22, mat: offerMat, frame: S.lm.alu, bar: 0.035, depth: 0.045 });
   // matching chalkboard version on the other side of the steps
@@ -1199,7 +1244,7 @@ function buildBoards(S) {
 }
 
 // A-frame: two panels hinged at the top. Poster 0.6 x 0.88 m inside a frame, on short legs.
-export const BOARD = { PW: 0.6, PH: 0.88, legs: 0.1, tilt: 0.16 };
+export const BOARD = { PW: 0.6, PH: 0.94, legs: 0.1, tilt: 0.16 };
 function aFrame(S, { x, z, ry, mat, frame, bar, depth }) {
   const { PW, PH, legs, tilt } = BOARD;
   const grp = new THREE.Group();
@@ -1343,7 +1388,7 @@ function buildStreet(S) {
   const lens = signPlane(g, mats.bulbSoft, 0.42, 0.18);
   lens.rotation.x = Math.PI / 2;
   lens.position.set(sx, head.position.y - 0.065, sz + 1.55);
-  pointLight(g, '#ffb46a', 120, 24, sx, yS + 6.15, sz + 1.4);
+  pointLight(g, '#ffb46a', 140, 26, sx, yS + 6.15, sz + 1.4);
   // a second lamp across the road (glow only)
   const fx = 12.5;
   rod(g, lm.pole, [fx, yS, roadZ1 + 0.5], [fx, yS + 6.4, roadZ1 + 0.5], 0.075, 10);
@@ -1392,10 +1437,12 @@ function buildNeighbors(S) {
   // RIGHT A: small laundry with a cool glow, sign in English + Arabic, AC units by our corner
   const ra = [bR, bR + 7.8], rc = (ra[0] + ra[1]) / 2 + 0.3;
   bldg(lm.bldgC, ra[0], ra[1], 0.0, 9.45);
-  const glowBack = plane(g, lm.shopGlow, 4.4, 2.3);
-  glowBack.position.set(rc, yS + 1.55, -0.6);
+  const lw = T.toTexture(laundryInterior(), { wrap: false });
+  const glowBack = plane(g, new THREE.MeshStandardMaterial({ color: '#10161c', emissive: '#ffffff', emissiveMap: lw, emissiveIntensity: 0.55, roughness: 0.2 }), 4.5, 2.4);
+  glowBack.position.set(rc, yS + 1.5, 0.006);
   const sg = plane(g, lm.glass, 4.6, 2.5, { receive: false });
-  sg.position.set(rc, yS + 1.55, 0.01);
+  sg.position.set(rc, yS + 1.55, 0.03);
+  for (const x of [-2.3, -0.75, 0.75, 2.3]) box(g, mats.blackSteel, 0.06, 2.5, 0.05, rc + x, yS + 0.3, 0.03, { cast: false });
   box(g, mats.blackSteel, 4.7, 0.08, 0.06, rc, yS + 2.8, 0.03, { cast: false });
   const lt = T.sign(designs.laundry);
   signBox(g, signMaterial(lt, { glow: 0.32 }), mats.blackSteel, 4.4, 0.86, 0.1, rc, yS + 3.05, 0.06);

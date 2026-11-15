@@ -45,12 +45,15 @@ export function buildKitchen(ctx) {
   const g = new THREE.Group(); g.name = 'interior'; scene.add(g);
   // Stainless steel only reads as steel when it reflects something bright: give the kitchens
   // their own clean white environment instead of the dim, warm dining-room one.
-  if (ctx.renderer) {
+  let env = ctx.envKitchen || null;
+  if (!env && ctx.renderer) {
     const pm = new THREE.PMREMGenerator(ctx.renderer);
-    const env = pm.fromScene(new RoomEnvironment(), 0.03).texture;
+    env = pm.fromScene(new RoomEnvironment(), 0.03).texture;
     pm.dispose();
-    const brighten = (m, rough) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 0.85; c.metalness = 0.85; c.roughness = rough; return c; };
-    M = { ...M, steelBrushed: brighten(M.steelBrushed, 0.38), steel: brighten(M.steel, 0.28) };
+  }
+  if (env) {
+    const brighten = (m, rough = 1) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 1.0; c.roughness *= rough; return c; };
+    M = { ...M, steelBrushed: brighten(M.steelBrushed, 1.35), steel: brighten(M.steel, 1.2), whiteTile: brighten(M.whiteTile || M.kitchenTile), kitchenFloor: brighten(M.kitchenFloor || M.kitchenTile) };
   }
   const food = makeFoodKit(M);
   const rnd = T.rng(515);
@@ -79,8 +82,13 @@ function burner(g, x, y, z, flameMat) {
   const grate = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.008, 4, 4), std('#1a1a1a', { metalness: 0.6 })); grate.rotation.x = Math.PI / 2; grate.position.set(x, y + 0.03, z); g.add(grate);
 }
 function gastro(g, M, x, y, z, foodMat, w = 0.26, d = 0.16) {
-  box(g, M.steel, w, 0.07, d, x, y, z, { cast: false });
-  const f = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.02, d - 0.02), foodMat); f.rotation.x = -Math.PI / 2; f.position.set(x, y + 0.065, z); g.add(f);
+  // steel tray: thin base + four walls, food filling it almost to the rim
+  box(g, M.steel, w, 0.008, d, x, y, z, { cast: false });
+  for (const s of [-1, 1]) {
+    box(g, M.steel, w, 0.07, 0.006, x, y, z + s * (d / 2 - 0.003), { cast: false });
+    box(g, M.steel, 0.006, 0.07, d, x + s * (w / 2 - 0.003), y, z, { cast: false });
+  }
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.014, d - 0.014), foodMat); f.rotation.x = -Math.PI / 2; f.position.set(x, y + 0.055, z); g.add(f);
 }
 function plateStack(g, x, y, z, n = 8, r = 0.12) {
   const geo = new THREE.CylinderGeometry(r, r * 0.8, 0.018, 24);
@@ -112,7 +120,7 @@ function liveStation(g, roof, M, W, food, rnd, animators) {
   const zf = LV.counterFront, zb = LV.counterBack, x0 = LV.x0, x1 = LV.x1, len = x1 - x0, zc = (zf + zb) / 2;
   // counter: oak slat front with red tile band, stainless work top, raised terrazzo pickup ledge
   box(g, W('woodOakV', 'woodBoothV'), len, 0.92, zf - zb, 0, 0, zc, { uv: 1 });
-  box(g, W('redTile', 'subway'), len, 0.18, 0.02, 0, 0.72, zf + 0.01, { uv: 0.5, cast: false });
+  box(g, W('redTile', 'subway'), len, 0.18, 0.02, 0, 0.72, zf + 0.01, { uv: 1, cast: false });
   box(g, M.steelBrushed, len + 0.04, 0.04, zf - zb + 0.02, 0, 0.92, zc);
   box(g, W('terrazzo', 'ceramic'), len, 0.04, 0.24, 0, 1.12, zf - 0.08);
   for (let x = x0 + 0.3; x < x1; x += 1.2) box(g, M.steelBrushed, 0.03, 0.16, 0.03, x, 0.96, zf - 0.08, { cast: false });
@@ -239,8 +247,6 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   box(g, steel, 0.9, 1.6, 0.9, L.x1 - 0.48, 0, z0 - 3.8);                                    // oven stack
   box(g, std('#1a1a1a', { roughness: 0.2, metalness: 0.4 }), 0.02, 0.5, 0.6, L.x1 - 0.93, 0.6, z0 - 3.8, { cast: false });
   // fire extinguisher + first aid on the right wall near the door
-  const ext = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.5, 16), std('#c8102e', { roughness: 0.35 })); ext.position.set(L.x1 - 0.1, 0.55, z0 - 0.35); g.add(ext);
-  box(g, std('#1a1a1a'), 0.04, 0.08, 0.04, L.x1 - 0.1, 0.8, z0 - 0.35, { cast: false });
   label(g, [{ text: '+', font: F.round, size: 140, color: '#ffffff', y: 0.42 }, { text: 'FIRST AID', font: F.round, size: 44, color: '#ffffff', y: 0.86, weight: 600 }], 0.34, 0.3, L.x1 - 0.06, 1.55, z0 - 0.35, -Math.PI / 2, { bg: '#2e9e5b', border: '#ffffff' });
   label(g, [{ text: 'CLEAN AS YOU GO', font: F.round, size: 54, color: '#1d5f5a', y: 0.3, weight: 600 }, { text: 'Gloves · Hair net · Colour-coded boards', font: F.round, size: 30, color: '#3b4b4a', y: 0.6 }, { text: '깨끗하게 · 안전하게', font: F.cute, size: 34, color: '#e889ab', y: 0.84 }], 0.8, 0.45, L.x1 - 0.012, 1.6, z0 - 4.9, -Math.PI / 2);
 
@@ -261,8 +267,8 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   // bright, clean white light (ceiling panels in the roof group, real lights stay)
   const panel = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#f2f7ff', emissiveIntensity: 3.2 });
   for (const x of [-4.2, -1.4, 1.4, 4.2]) for (const z of [-22.6, -25.3]) box(roof, panel, 1.2, 0.03, 0.6, x, L.ceil - 0.04, z, { cast: false, receive: false });
-  pointLight(g, '#f3f7ff', 14, 10, -2.6, 3.7, -24.0);
-  pointLight(g, '#f3f7ff', 14, 10, 2.6, 3.7, -24.0);
+  pointLight(g, '#f6f9ff', 16, 10, -3.2, 3.7, -24.0);
+  pointLight(g, '#f6f9ff', 16, 10, 3.2, 3.7, -24.0);
 }
 
 function faucet(g, M, x, z) {

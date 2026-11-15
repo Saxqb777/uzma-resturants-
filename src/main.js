@@ -10,11 +10,13 @@ import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RESTAURANT, FONTS, LAYOUT, SCENES } from './config.js';
 import { buildMaterials } from './materials.js';
 import { setMaxAnisotropy, refreshSignFonts, skyTexture } from './textures.js';
+import { loadHDR, onAssetProgress } from './assets.js';
 import { buildInterior } from './interior.js';
 import { loadFoodTextures } from './food.js';
 import { buildCashier, loadPolaroidPhotos } from './cashier.js';
 import { buildKitchen } from './kitchen.js';
 import { buildDecor, loadArt } from './decor.js';
+import { placeProps } from './props.js';
 import { buildExterior } from './exterior.js';
 import { Director } from './director.js';
 import { Spectator } from './spectator.js';
@@ -82,17 +84,17 @@ composer.addPass(new OutputPass());
 const fxaa = new ShaderPass(FXAAShader);
 composer.addPass(fxaa);
 const grade = new ShaderPass({
-  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vignette: { value: 0.42 }, grain: { value: 0.035 } },
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vignette: { value: 0.42 }, grain: { value: 0.035 }, warmth: { value: 0.6 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float time, vignette, grain; varying vec2 vUv;
+    uniform sampler2D tDiffuse; uniform float time, vignette, grain, warmth; varying vec2 vUv;
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
     void main(){
       vec4 c = texture2D(tDiffuse, vUv);
       vec2 d = (vUv - 0.5) * vec2(1.0, 0.82);
       float v = smoothstep(0.78, 0.18, length(d));
       c.rgb *= mix(1.0 - vignette, 1.0, v);
-      c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), 0.6);          // warm grade
+      c.rgb = mix(c.rgb, c.rgb * vec3(1.05, 1.0, 0.93), warmth);       // warm grade (off in the white kitchen)
       c.rgb += (h(vUv * 917.0 + fract(time) * 37.0) - 0.5) * grain;     // film grain
       gl_FragColor = c;
     }`,
@@ -111,22 +113,29 @@ const HEMI = {
   in: { i: 1.15, sky: new THREE.Color('#ffe0c0'), ground: new THREE.Color('#5a3e2c') },
   out: { i: 0.6, sky: new THREE.Color('#4a5878'), ground: new THREE.Color('#2a1c14') },
   top: { i: 1.8, sky: new THREE.Color('#fff0dc'), ground: new THREE.Color('#6a5040') },
+  kitchen: { i: 1.35, sky: new THREE.Color('#f4f8ff'), ground: new THREE.Color('#c9d0d6') },
 };
 const zones = new ZoneLights(scene, camera);
 
 async function build() {
   await step(8, 'Lighting the grill…');
   const mats = await buildMaterials(renderer);
-  if (!scene.environment) scene.environment = makeEnvironment();
+  // real HDR light probes: warm restaurant for reflections inside, a clean white room for the kitchen
+  const [envWarm, envKitchen] = await Promise.all([
+    loadHDR('assets/env/warm_restaurant_1k.hdr', renderer).catch(() => null),
+    loadHDR('assets/env/kitchen_white_512.hdr', renderer).catch(() => null),
+  ]);
+  scene.environment = envWarm || makeEnvironment();
   await loadFoodTextures();
   await step(35, 'Setting the tables…');
-  const ctx = { scene, camera, renderer, mats, roof, animators, layout: LAYOUT, R: RESTAURANT, F: FONTS };
+  const ctx = { scene, camera, renderer, mats, roof, animators, envKitchen, layout: LAYOUT, R: RESTAURANT, F: FONTS };
   buildInterior(ctx);
   await loadPolaroidPhotos();
   buildCashier(ctx);
   buildKitchen(ctx);
   await loadArt();
   buildDecor(ctx);
+  await placeProps(ctx);
   await step(60, 'Hanging the signs…');
   buildExterior(ctx);
   scene.add(hemi);
@@ -340,8 +349,10 @@ function frame() {
   roof.visible = mode === 'tour' ? !director.cutaway : roofOn && !above;
   // ambient fill follows where the camera is: warm inside, cool night outside, bright for the floor plan
   const zoneNow = zones.zoneOf(camera.position);
-  const want = !roof.visible ? HEMI.top : zoneNow === 'in' ? HEMI.in : HEMI.out;
+  const inKitchen = zoneNow === 'in' && camera.position.z < LAYOUT.kitchen.z0 + 0.3;
+  const want = !roof.visible ? HEMI.top : inKitchen ? HEMI.kitchen : zoneNow === 'in' ? HEMI.in : HEMI.out;
   const k = Math.min(1, dt * 3);
+  grade.uniforms.warmth.value += ((inKitchen ? 0 : 0.6) - grade.uniforms.warmth.value) * k;
   hemi.intensity += (want.i - hemi.intensity) * k;
   hemi.color.lerp(want.sky, k); hemi.groundColor.lerp(want.ground, k);
   zones.update(dt);
