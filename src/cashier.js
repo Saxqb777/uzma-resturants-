@@ -14,10 +14,10 @@ const PINK = '#f2a7c3', PINK2 = '#e889ab', TEAL = '#5fc2b8', TEAL2 = '#2f8f8a', 
 // Where things are (shared with the people/story code)
 export const CASHIER = {
   counter: { x0: 5.35, x1: 5.95, z0: -1.8, z1: -4.3, top: 1.05 },
-  staff: { x: 6.5, z: -3.05, ry: -Math.PI / 2 },             // cashier stands here, facing the customers (-x)
+  staff: { x: 6.42, z: -3.05, ry: -Math.PI / 2 },             // cashier stands here, facing the customers (-x)
   board: { x: 7.49, z0: -1.9, z1: -4.45, y0: 1.05, y1: 3.05 }, // cork polaroid board on the right wall
-  pinSpot: { x: 7.45, y: 1.78, z: -2.45 },                    // empty spot where the new polaroid goes
-  pinStand: { x: 7.0, z: -2.45, ry: Math.PI / 2 },            // where the photographer stands to pin it
+  pinSpot: { x: 7.45, y: 1.66, z: -2.45 },                    // empty spot where the new polaroid goes
+  pinStand: { x: 7.08, z: -2.45, ry: Math.PI / 2 },            // where the photographer stands to pin it
   nook: { x: 5.3, z: -0.85 },
 };
 
@@ -160,8 +160,8 @@ export function buildCashier(ctx) {
   rb(g, W('terrazzo', 'ceramic'), C.x1 - C.x0 + 0.12, 0.04, len + 0.1, (C.x0 + C.x1) / 2 - 0.04, C.top - 0.04, zc, 0.012);
   box(g, teal, 0.02, 0.06, len, C.x0 - 0.01, 0, zc, { cast: false });                      // teal kick strip
   // back counter + shelf under the polaroid board (only the back half, so staff can reach the board)
-  box(g, W('woodOak', 'woodBooth'), 0.5, 0.9, 1.2, 7.25, 0, -3.85);
-  rb(g, W('terrazzo', 'ceramic'), 0.54, 0.035, 1.24, 7.24, 0.9, -3.85, 0.01);
+  box(g, W('woodOak', 'woodBooth'), 0.5, 0.9, 1.0, 7.25, 0, -3.78);
+  rb(g, W('terrazzo', 'ceramic'), 0.54, 0.035, 1.04, 7.24, 0.9, -3.78, 0.01);
   // soft-drink & juice fridge (no alcohol)
   fridge(g, M, 7.2, -4.65);
 
@@ -180,6 +180,7 @@ export function buildCashier(ctx) {
 
   // ---- plant post wrapped in vines at the counter's front corner
   box(g, M.woodDarkV, 0.16, L.ceil, 0.16, 5.2, 0, -4.55);
+  box(g, M.woodDarkV, 0.14, 2.62, 0.14, 5.2, 0, -1.62);   // front corner post (rises out of the planter)
   vines(g, 5.2, -4.55, 0.12, 0.2, L.ceil - 0.2, 260, 11);
 
   // ---- things on the counter

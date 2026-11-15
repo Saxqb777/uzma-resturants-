@@ -679,12 +679,12 @@ function laundryDesign(F) {
 function laundryInterior() {
   const [c, x] = T.makeCanvas(512, 272);
   const gr = x.createLinearGradient(0, 0, 0, 272);
-  gr.addColorStop(0, '#cfe3f2'); gr.addColorStop(0.6, '#9db8cc'); gr.addColorStop(1, '#4d5d6a');
+  gr.addColorStop(0, '#b4c9d8'); gr.addColorStop(0.6, '#7891a4'); gr.addColorStop(1, '#3a4651');
   x.fillStyle = gr; x.fillRect(0, 0, 512, 272);
   x.fillStyle = 'rgba(255,255,255,0.8)';
   for (const lx of [90, 256, 422]) x.fillRect(lx - 50, 6, 100, 6);              // ceiling tubes
   const unit = (ux, uy, w, h) => {
-    x.fillStyle = '#e9edf0'; x.fillRect(ux, uy, w, h);
+    x.fillStyle = '#d5dade'; x.fillRect(ux, uy, w, h);
     x.fillStyle = '#b9c2c8'; x.fillRect(ux, uy, w, 8);
     x.fillStyle = '#2b3a46'; x.beginPath(); x.arc(ux + w / 2, uy + h * 0.58, w * 0.3, 0, Math.PI * 2); x.fill();
     x.strokeStyle = '#8f9aa2'; x.lineWidth = 4; x.stroke();
@@ -1438,7 +1438,7 @@ function buildNeighbors(S) {
   const ra = [bR, bR + 7.8], rc = (ra[0] + ra[1]) / 2 + 0.3;
   bldg(lm.bldgC, ra[0], ra[1], 0.0, 9.45);
   const lw = T.toTexture(laundryInterior(), { wrap: false });
-  const glowBack = plane(g, new THREE.MeshStandardMaterial({ color: '#10161c', emissive: '#ffffff', emissiveMap: lw, emissiveIntensity: 0.55, roughness: 0.2 }), 4.5, 2.4);
+  const glowBack = signPlane(g, new THREE.MeshStandardMaterial({ color: '#0c1116', emissive: '#ffffff', emissiveMap: lw, emissiveIntensity: 0.3, roughness: 0.2 }), 4.5, 2.4);
   glowBack.position.set(rc, yS + 1.5, 0.006);
   const sg = plane(g, lm.glass, 4.6, 2.5, { receive: false });
   sg.position.set(rc, yS + 1.55, 0.03);

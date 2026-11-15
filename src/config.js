@@ -158,8 +158,8 @@ export const SCENES = [
     id: 'kitchen', zone: 'in', kicker: 'Back of house', glide: true,
     title: 'The Main Kitchen',
     text: 'Spotless and bright: everything is prepared on site, from fresh vegetables to marinated chicken.',
-    cam: [-0.3, 1.8, -21.6], look: [0.3, 1.15, -26], fov: 70,
-    via: [-0.5, 1.62, -20.0],
+    cam: [0, 1.75, -22.35], look: [0.25, 1.1, -26], fov: 68,
+    via: [-0.45, 1.6, -20.2],
     drift: [0.15, 0, -0.2],
   },
   {

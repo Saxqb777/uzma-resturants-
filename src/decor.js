@@ -137,13 +137,33 @@ function lightCube(parent, M, x, y, z, ko, en, bg, fg, seed) {
 function leafBatches() {
   return LEAF_COLORS.map((c) => new InstanceBatch(leafGeometry(), leafMaterial(c), { cast: false }));
 }
-// a vine running along a line with leaves, drooping strands hanging down
+// A vine running along a line (leaves hugging it) with trailing strands hanging down from it.
+// Each strand is a chain of leaves on a thin stem, so it reads as a real trailing plant.
+const STEMS = [];
 function vineRun(B, a, b, n, droop, seed) {
   const r = T.rng(seed), A = new THREE.Vector3(...a), Bv = new THREE.Vector3(...b);
-  for (let i = 0; i < n; i++) {
-    const t = r(), p = A.clone().lerp(Bv, t);
-    const hang = r() < 0.45 ? r() * droop : 0;
-    B[i % B.length].add(p.x + (r() - 0.5) * 0.08, p.y - hang + (r() - 0.5) * 0.05, p.z + (r() - 0.5) * 0.08, { rx: (r() - 0.5) * 2, ry: r() * 6.3, rz: (r() - 0.5) * 2, s: 0.6 + r() * 0.8 });
+  const len = A.distanceTo(Bv);
+  const leaf = (x, y, z, hanging) => B[Math.floor(r() * B.length)].add(x, y, z, {
+    rx: hanging ? Math.PI + (r() - 0.5) * 1.1 : (r() - 0.5) * 2, ry: r() * 6.3, rz: (r() - 0.5) * (hanging ? 0.8 : 2), s: 0.65 + r() * 0.7,
+  });
+  const along = droop > 0 ? Math.round(n * 0.5) : n;
+  for (let i = 0; i < along; i++) {
+    const p = A.clone().lerp(Bv, r());
+    leaf(p.x + (r() - 0.5) * 0.07, p.y + (r() - 0.5) * 0.06, p.z + (r() - 0.5) * 0.07, false);
+  }
+  STEMS.push(A.x, A.y, A.z, Bv.x, Bv.y, Bv.z);
+  if (droop <= 0) return;
+  const strands = Math.max(1, Math.round(len / 0.5));
+  const per = Math.max(4, Math.round((n - along) / strands));
+  for (let s = 0; s < strands; s++) {
+    const p = A.clone().lerp(Bv, (s + r()) / strands);
+    const L = droop * (0.3 + r() * 0.7), sx = (r() - 0.5) * 0.1, sz = (r() - 0.5) * 0.1;
+    const count = Math.max(3, Math.round(per * (L / droop) * 1.4));
+    for (let k = 0; k < count; k++) {
+      const t = (k + r() * 0.6) / count;
+      leaf(p.x + sx * t * t + (r() - 0.5) * 0.03, p.y - L * t, p.z + sz * t * t + (r() - 0.5) * 0.03, true);
+    }
+    STEMS.push(p.x, p.y, p.z, p.x + sx, p.y - L, p.z + sz);
   }
 }
 
@@ -151,6 +171,7 @@ function vineRun(B, a, b, n, droop, seed) {
 export function buildDecor(ctx) {
   const { scene, mats: M } = ctx;
   const g = new THREE.Group(); g.name = 'interior'; scene.add(g);
+  STEMS.length = 0;
   const frameMat = M.woodDark;
   const blackFrame = new THREE.MeshStandardMaterial({ color: '#1a1716', roughness: 0.5 });
 
@@ -216,6 +237,11 @@ export function buildDecor(ctx) {
   // hanging planters in the front zone
   for (const [x, z] of [[-2.6, -2.2], [2.6, -2.2], [-4.6, -3.6], [2.4, -4.0]]) hangingPlanter(g, M, VB, x, 2.5, z, Math.round(x * 7 + z));
   VB.forEach((b) => b.build(g));
+  // thin stems for every vine and strand
+  const stemGeo = new THREE.BufferGeometry();
+  stemGeo.setAttribute('position', new THREE.Float32BufferAttribute(STEMS, 3));
+  const stems = new THREE.LineSegments(stemGeo, new THREE.LineBasicMaterial({ color: '#2e4a22' }));
+  stems.userData.keep = true; g.add(stems);
 
   mergeStatic(g);
   return g;

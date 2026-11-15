@@ -1785,8 +1785,6 @@ const PROP_MATS = {
   darkSteel: () => std('darkSteel', { color: '#2b2c2e', metalness: 0.6, roughness: 0.45 }),
   black: () => std('black', { color: '#141414', roughness: 0.55 }),
   glass: () => cachedMat('glassMat', () => new THREE.MeshStandardMaterial({ color: '#e8f0f2', roughness: 0.05, metalness: 0, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide })),
-  drink: () => std('drink', { color: '#c98a2e', roughness: 0.15, transparent: true, opacity: 0.88 }),
-  foam: () => std('foam', { color: '#f3ecdc', roughness: 0.9 }),
   wood: () => std('wood', { color: '#5a3a24', roughness: 0.6 }),
   ceramic: () => std('ceramic', { color: '#f1efe9', roughness: 0.35 }),
   stone: () => std('stone', { color: '#2f2d2b', roughness: 0.8 }),
@@ -1802,16 +1800,31 @@ const PROPS = {
     a.position.x = -0.006; a.rotation.z = -0.045; b.position.x = 0.006; b.rotation.z = 0.045;
     g.add(a, b); return g;
   },
-  glass() {
-    // tumbler, axis +Y, base at y = 0
+  glass(variant = 0) {
+    // tall tumbler of a soft drink (no alcohol is served): 0 = strawberry milk + teal straw,
+    // 1 = orange juice + pink straw; ice cubes on top. Axis +Y, base at y = 0.
     const g = new THREE.Group();
-    const wall = new THREE.Mesh(cachedMat('glassGeo', () => new THREE.CylinderGeometry(0.034, 0.029, 0.115, 24, 1, true).translate(0, 0.0575, 0)), PROP_MATS.glass());
-    const bottom = new THREE.Mesh(cachedMat('glassBot', () => new THREE.CylinderGeometry(0.029, 0.029, 0.008, 24).translate(0, 0.004, 0)), PROP_MATS.glass());
-    const drink = new THREE.Mesh(cachedMat('drinkGeo', () => new THREE.CylinderGeometry(0.031, 0.027, 0.075, 24).translate(0, 0.008 + 0.0375, 0)), PROP_MATS.drink());
-    const foam = new THREE.Mesh(cachedMat('foamGeo', () => new THREE.CylinderGeometry(0.0318, 0.031, 0.012, 24).translate(0, 0.089, 0)), PROP_MATS.foam());
+    const H = 0.14, fillH = 0.108;
+    const wall = new THREE.Mesh(cachedMat('glassGeo2', () => new THREE.CylinderGeometry(0.035, 0.029, H, 28, 1, true).translate(0, H / 2, 0)), PROP_MATS.glass());
+    const bottom = new THREE.Mesh(cachedMat('glassBot2', () => new THREE.CylinderGeometry(0.029, 0.029, 0.008, 28).translate(0, 0.004, 0)), PROP_MATS.glass());
+    const fillMat = variant ? std('juice', { color: '#f39a1c', roughness: 0.25, transparent: true, opacity: 0.94 }) : std('strawberryMilk', { color: '#f3a7bd', roughness: 0.45 });
+    const fill = new THREE.Mesh(cachedMat('fillGeo2', () => new THREE.CylinderGeometry(0.0325, 0.0275, fillH, 28).translate(0, 0.008 + fillH / 2, 0)), fillMat);
+    const ice = std('ice', { color: '#eef7fa', roughness: 0.05, transparent: true, opacity: 0.55 });
+    const cube = cachedMat('iceGeo', () => new THREE.BoxGeometry(0.017, 0.015, 0.017));
+    [[-0.011, 0.004, 0.3], [0.012, -0.006, 1.1], [0.0, 0.013, 2.0]].forEach(([x, z, r], i) => {
+      const c = new THREE.Mesh(cube, ice);
+      c.position.set(x, 0.008 + fillH - 0.002 + (i === 2 ? 0.004 : 0), z);
+      c.rotation.set(r * 0.4, r, r * 0.25);
+      g.add(c);
+    });
+    const straw = new THREE.Mesh(cachedMat('strawGeo', () => new THREE.CylinderGeometry(0.0033, 0.0033, 0.2, 8).translate(0, 0.1, 0)),
+      std(variant ? 'strawPink' : 'strawTeal', { color: variant ? CASHIER_PINK : BRAND_TEAL, roughness: 0.4 }));
+    straw.position.set(0.008, 0.012, -0.004);
+    straw.rotation.set(-0.08, 0, -0.2);
     wall.renderOrder = 2; bottom.renderOrder = 2;
-    wall.userData.noShadow = true;
-    g.add(drink, foam, bottom, wall); return g;
+    wall.userData.noShadow = true; bottom.userData.noShadow = true;
+    g.add(fill, straw, bottom, wall);
+    return g;
   },
   phone() {
     // portrait phone, long axis +Y, screen facing +Z, centered
@@ -1943,11 +1956,11 @@ function attachProp(r, kind, poseName, ctx) {
       break;
     }
     case 'glass': {
-      obj = PROPS.glass();
+      obj = PROPS.glass(Math.abs(Math.floor(ctx.seed || 0)) % 2);
       const up = X.clone();
       const zz = Z.clone().addScaledVector(up, -Z.dot(up)).normalize();
       quat = basis(new THREE.Vector3().crossVectors(up, zz), up, zz);
-      pos = grip.clone().addScaledVector(Z, 0.022).addScaledVector(up, -0.045);
+      pos = grip.clone().addScaledVector(Z, 0.022).addScaledVector(up, -0.05);
       break;
     }
     case 'phone': {

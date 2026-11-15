@@ -14,14 +14,16 @@ const LV = L.live, K = L.kitchen;
 
 // Spots for people (shared with the people/story code)
 export const KITCHEN_SPOTS = {
-  headChef: { x: 0.0, z: -19.75, ry: 0, pose: 'cook-flip' },
-  sousChef: { x: -2.4, z: -19.75, ry: 0, pose: 'cook-stir' },
-  assistant1: { x: 2.4, z: -19.75, ry: 0, pose: 'prep-chop' },
-  assistant2: { x: -4.2, z: -19.75, ry: 0, pose: 'cook-stir' },
-  waiter: { x: 1.2, z: -17.75, ry: Math.PI, pose: 'carry-tray' },
-  kitchen1: { x: -1.4, z: -24.5, ry: 0, pose: 'prep-chop' },      // vegetables (island front edge at z -24.08)
-  kitchen2: { x: 1.6, z: -24.5, ry: 0, pose: 'prep-chop' },       // marinating chicken
-  kitchen3: { x: 0.4, z: -21.75, ry: 0, pose: 'cashier' },        // plating at the pass, facing it
+  // live station: staff stand behind the counter (its back edge is z = -19.2) facing the guests
+  headChef: { x: 0.6, z: -19.42, ry: 0, pose: 'cook-flip' },      // pan over the burner at x 0.6
+  sousChef: { x: -3.6, z: -19.42, ry: 0, pose: 'cook-stir' },     // wok
+  assistant2: { x: -4.4, z: -19.42, ry: 0, pose: 'cook-stir' },   // wok
+  assistant1: { x: 2.6, z: -19.4, ry: 0, pose: 'prep-chop' },     // cutting board
+  waiter: { x: 1.3, z: -17.72, ry: Math.PI, pose: 'carry-tray' }, // collecting a tray on the dining side
+  // main kitchen: prep islands (their back edge is z = -24.08), staff face the pass
+  kitchen1: { x: -1.4, z: -24.32, ry: 0, pose: 'prep-chop' },     // vegetables (green board)
+  kitchen2: { x: 1.6, z: -24.32, ry: 0, pose: 'prep-chop' },      // chicken (red board)
+  kitchen3: { x: -1.05, z: -21.76, ry: 0, pose: 'cashier' },      // plating at the pass, hands on the shelf
 };
 
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.55, ...o });
@@ -119,11 +121,11 @@ function tray(g, x, y, z, food, rnd) {
 function liveStation(g, roof, M, W, food, rnd, animators) {
   const zf = LV.counterFront, zb = LV.counterBack, x0 = LV.x0, x1 = LV.x1, len = x1 - x0, zc = (zf + zb) / 2;
   // counter: oak slat front with red tile band, stainless work top, raised terrazzo pickup ledge
-  box(g, W('woodOakV', 'woodBoothV'), len, 0.92, zf - zb, 0, 0, zc, { uv: 1 });
+  box(g, W('woodOakV', 'woodBoothV'), len, 0.86, zf - zb, 0, 0, zc, { uv: 1 });
   box(g, W('redTile', 'subway'), len, 0.18, 0.02, 0, 0.72, zf + 0.01, { uv: 1, cast: false });
-  box(g, M.steelBrushed, len + 0.04, 0.04, zf - zb + 0.02, 0, 0.92, zc);
+  box(g, M.steelBrushed, len + 0.04, 0.04, zf - zb + 0.02, 0, 0.86, zc);
   box(g, W('terrazzo', 'ceramic'), len, 0.04, 0.24, 0, 1.12, zf - 0.08);
-  for (let x = x0 + 0.3; x < x1; x += 1.2) box(g, M.steelBrushed, 0.03, 0.16, 0.03, x, 0.96, zf - 0.08, { cast: false });
+  for (let x = x0 + 0.3; x < x1; x += 1.2) box(g, M.steelBrushed, 0.03, 0.22, 0.03, x, 0.9, zf - 0.08, { cast: false });
   // back counter along the wall + shelves
   box(g, M.steelBrushed, len, 0.9, 0.6, 0, 0, LV.wallZ + 0.32);
   box(g, M.steel, len, 0.03, 0.62, 0, 0.9, LV.wallZ + 0.32, { cast: false });
@@ -133,23 +135,27 @@ function liveStation(g, roof, M, W, food, rnd, animators) {
   }
 
   // cooking line on the work top (left → right): wok burners, two griddles with chicken, pans
-  const Y = 0.96;
+  const Y = 0.9;
   const flame = new THREE.MeshStandardMaterial({ color: '#0a1530', emissive: '#4a8cff', emissiveIntensity: 2.6 });
   animators.push((t) => { flame.emissiveIntensity = 2.4 + Math.sin(t * 21) * 0.25 + Math.sin(t * 9) * 0.2; });
-  for (const x of [-4.4, -3.6]) { burner(g, x, Y, zc - 0.05, flame); wok(g, x, Y, zc - 0.05, food.mats.chicken); }
-  for (const x of [-1.2, 0.6]) {
-    box(g, std('#1d1d1f', { metalness: 0.6, roughness: 0.45 }), 1.0, 0.05, 0.55, x, Y, zc - 0.05);
-    const hot = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.5), new THREE.MeshStandardMaterial({ color: '#222', emissive: '#ff4a12', emissiveIntensity: 0.12, roughness: 0.35, metalness: 0.6 }));
-    hot.rotation.x = -Math.PI / 2; hot.position.set(x, Y + 0.052, zc - 0.05); g.add(hot);
-    food.grillPieces(g, x, Y + 0.04, zc - 0.05, rnd, 16);
+  const zl = zb + 0.27;                                   // the cooking line sits near the staff edge of the counter
+  for (const x of [-4.4, -3.6]) { burner(g, x, Y, zl, flame); wok(g, x, Y, zl, food.mats.chicken); }
+  {
+    // one long griddle full of spicy chicken
+    const x = -1.2, gw = 2.0;
+    box(g, std('#1d1d1f', { metalness: 0.6, roughness: 0.45 }), gw, 0.05, 0.5, x, Y, zl);
+    const hot = new THREE.Mesh(new THREE.PlaneGeometry(gw - 0.06, 0.45), new THREE.MeshStandardMaterial({ color: '#222', emissive: '#ff4a12', emissiveIntensity: 0.12, roughness: 0.35, metalness: 0.6 }));
+    hot.rotation.x = -Math.PI / 2; hot.position.set(x, Y + 0.052, zl); g.add(hot);
+    for (const dx of [-0.6, 0, 0.6]) food.grillPieces(g, x + dx, Y + 0.04, zl, rnd, 12);
   }
-  for (const x of [2.0, 2.7]) { burner(g, x, Y, zc - 0.05, flame); pan(g, M, x, Y + 0.03, zc - 0.05, -0.3, food.mats.kimchi); }
+  burner(g, 0.6, Y, zl, flame);                           // the head chef tosses her pan over this one
+  burner(g, 1.4, Y, zl, flame); pan(g, M, 1.4, Y + 0.03, zl, -0.3, food.mats.kimchi);
   // prep side: ingredient trays, squeeze bottles, rice cooker, cutting board
   gastro(g, M, 3.6, Y, zc - 0.12, food.mats.kimchi); gastro(g, M, 3.9, Y, zc + 0.08, food.mats.cucumber);
   gastro(g, M, 4.3, Y, zc - 0.12, food.mats.rice); gastro(g, M, 4.6, Y, zc + 0.08, food.mats.lettuce);
   for (const [i, c] of ['#b8241a', '#5a2b14', '#f2c14e'].entries()) squeeze(g, -2.5 + i * 0.09, Y, zc + 0.15, c);
   const rc = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.26, 24), std('#f2f2ef', { roughness: 0.3 })); rc.position.set(-2.9, Y + 0.13, LV.wallZ + 0.32); g.add(rc);
-  rb(g, std('#e9e3d3', { roughness: 0.7 }), 0.45, 0.025, 0.3, 2.4, Y, zc + 0.12, 0.01);
+  rb(g, std('#e9e3d3', { roughness: 0.7 }), 0.45, 0.025, 0.3, 2.6, Y, zb + 0.2, 0.01);
   // ready dishes on the pickup ledge (the waiter takes these)
   for (const x of [-0.4, 0.15, 1.2]) tray(g, x, 1.16, zf - 0.08, food, rnd);
   // plate stacks + greenery on the ledge and back counter
@@ -255,11 +261,10 @@ function mainKitchen(g, roof, M, W, food, rnd) {
     box(g, steel, 2.2, 0.88, 0.95, x, 0, -23.6);
     box(g, M.steel, 2.24, 0.04, 0.99, x, 0.88, -23.6, { cast: false });
     box(g, M.steel, 2.1, 0.02, 0.85, x, 0.2, -23.6, { cast: false });
-    const board = rb(g, std(kind === 'veg' ? '#3f9e52' : '#c9343a', { roughness: 0.6 }), 0.5, 0.025, 0.34, x, 0.92, -23.75, 0.01);
+    const board = rb(g, std(kind === 'veg' ? '#3f9e52' : '#c9343a', { roughness: 0.6 }), 0.5, 0.025, 0.3, x, 0.92, -23.91, 0.01);
     board.userData.keep = true;
     if (kind === 'veg') vegetables(g, x, 0.92, -23.45, rnd);
     else { for (const dx of [-0.6, 0.55]) gastro(g, M, x + dx, 0.92, -23.45, food.mats.chicken, 0.5, 0.32); food.banchan(g, 'kimchi', x + 0.15, 0.92, -23.3, 1); }
-    const knife = box(g, std('#d9dcdf', { metalness: 0.9, roughness: 0.2 }), 0.22, 0.004, 0.03, x + 0.05, 0.946, -23.72, { cast: false }); knife.rotation.y = 0.3;
   }
   // kitchen side of the pass: plated dishes going out, heat lamp is on the dining side
   for (const x of [-0.9, 0.0, 0.9]) tray(g, x, K.pass.y0 + 0.05, L.kitchenZ - 0.12, food, rnd);

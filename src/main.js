@@ -17,6 +17,7 @@ import { buildCashier, loadPolaroidPhotos } from './cashier.js';
 import { buildKitchen } from './kitchen.js';
 import { buildDecor, loadArt } from './decor.js';
 import { placeProps } from './props.js';
+import { buildCrowd } from './crowd.js';
 import { buildExterior } from './exterior.js';
 import { Director } from './director.js';
 import { Spectator } from './spectator.js';
@@ -136,6 +137,8 @@ async function build() {
   await loadArt();
   buildDecor(ctx);
   await placeProps(ctx);
+  await step(52, 'Seating the guests…');
+  await buildCrowd(ctx, story);
   await step(60, 'Hanging the signs…');
   buildExterior(ctx);
   scene.add(hemi);
@@ -336,6 +339,7 @@ window.addEventListener('resize', () => {
 
 // ------------------------------------------------------------ loop
 const clock = new THREE.Clock();
+let snapLook = false;   // screenshots: jump straight to the settled ambient light instead of easing
 let t = 0;
 function frame() {
   const raw = clock.getDelta();
@@ -351,7 +355,7 @@ function frame() {
   const zoneNow = zones.zoneOf(camera.position);
   const inKitchen = zoneNow === 'in' && camera.position.z < LAYOUT.kitchen.z0 + 0.3;
   const want = !roof.visible ? HEMI.top : inKitchen ? HEMI.kitchen : zoneNow === 'in' ? HEMI.in : HEMI.out;
-  const k = Math.min(1, dt * 3);
+  const k = snapLook ? 1 : Math.min(1, dt * 3);
   grade.uniforms.warmth.value += ((inKitchen ? 0 : 0.6) - grade.uniforms.warmth.value) * k;
   hemi.intensity += (want.i - hemi.intensity) * k;
   hemi.color.lerp(want.sky, k); hemi.groundColor.lerp(want.ground, k);
@@ -369,6 +373,7 @@ window.__uzma = {
   renderOnce: () => frame(),
   tick: (dt) => { t += dt; for (const f of animators) f(t, dt); },
   quality, zones, composer,
+  settle: (on = true) => { snapLook = on; },
 };
 
 quality.apply();
