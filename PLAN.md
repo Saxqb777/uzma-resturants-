@@ -10,21 +10,21 @@ This file is the project's memory. Any new chat should read it first.
 ## Decisions so far
 - **Tech:** three.js in the browser. Nothing to install, it opens from a link and runs on a normal laptop.
 - **Look:** stylized but warm and moody, matched to her 4 reference photos (retro Korean BBQ / pocha).
-  - Inside: dark open ceiling, wooden high-back booths, little rusty tin roofs over the booths, yellow-framed windows, soju bottle shelves, hand-painted retro signs, bare bulbs, a grill in every table.
+  - Inside: dark open ceiling, wooden high-back booths, little rusty tin roofs over the booths, hand-painted retro signs, bare bulbs, a grill in every table. (v1: no alcohol, so no bottle shelves.)
   - Outside: a mix of her two storefront photos. Wooden front, brick, rusty tin awning, painted billboard, black tiled hanok eave, vertical lightbox sign, lantern, steps, menu boards.
   - The street around it is "little vibes" only.
 - **Signs:** all original wording. No real brands or logos copied from the photos.
-- **Name:** `우즈마 / UZMA` is a placeholder taken from the repo name. Change it in `src/config.js`.
+- **Name:** Seoulicious (v1). Change it in `src/config.js`.
 - **Workflow rule:** show visuals before big work. Never make big changes without a final OK from the user.
 
 ## Status
-- **v0 (done, waiting for her feedback):**
+- **v1 (built, on GitHub branch, NOT deployed yet):**
+  - Preview of all 12 slides: `docs/v1-preview-a.jpg` (1–6), `docs/v1-preview-b.jpg` (7–12).
+  - Deploy only when the user says "deploy".
+- **v0 (live, old version):**
   - Public website (Vercel): https://korean-resturant-proj-uni.vercel.app
   - Private Claude link: https://claude.ai/artifact/7VsVhKtA44W7rnQExD1TKk
-  - Preview of all 8 scenes: `docs/v0-preview.jpg`
-  - The room, bar, kitchen and storefront are built.
-  - 8 tour scenes, look-around mode, floor-plan view.
-  - No people yet.
+  - Preview: `docs/v0-preview.jpg`
 
 ## v1 — client feedback (Nov 15) → decisions
 - **Name:** Seoulicious, English + Arabic سيوليشس on all signs. No Korean shop name.
@@ -69,12 +69,10 @@ This file is the project's memory. Any new chat should read it first.
 - **Still waiting on her:** real menu items + prices (placeholders in `src/config.js` → `MENU`).
 - **Staff names:** Korean name tags, editable in `config.js` → `STAFF`.
 
-## Next (to discuss after she sees v0)
-- **v1:** staff (host at the counter, cooks in the kitchen, a server in the aisle) and people eating at a few tables.
-  - Simple stylized figures, with idle animation.
-- **Menu:** a proper menu scene, e.g. a menu card close-up or dishes on the table.
-- **Camera:** her final scene list, wording and camera angles.
-- **Polish ideas:** grill smoke, steam from stews, ambient sound (optional, button to start), day/night switch.
+## Waiting on / next
+- Her real menu items + prices (`src/config.js` → `MENU`).
+- Her feedback on the v1 previews, then "deploy".
+- Ideas not done yet: grill smoke, steam, optional ambient sound.
 
 ## Tour scenes (v0)
 1. Street
@@ -105,7 +103,11 @@ This file is the project's memory. Any new chat should read it first.
 - **Auto quality** (`src/quality.js`): watches the frame rate and lowers or raises render resolution.
   - The bottom-bar button cycles **Auto / High / Low**. The choice is remembered per browser.
   - `?dpr=1` in the URL forces a fixed resolution (used for screenshots).
-- **Edge smoothing:** FXAA instead of 4× MSAA, which was ~45% of every frame.
+- **Edge smoothing:** SMAA instead of 4× MSAA, which was ~45% of every frame.
+- **Auto quality** lowers resolution first; if still slow it turns ambient occlusion off (halves the draw work).
+- **Lighter models:** prop/plant models decimated offline (352K → 150K triangles, same look).
+- **No glare:** bloom only on real light sources (bulbs, neon, flames), capped so shiny steel never blows out.
+  Kitchen steel is satin, not mirror.
 - **Area lighting** (`src/lighting.js`): only lights near the camera are on, with a 0.6 s fade.
   - Street: street lights + the front-window interior lights.
   - Inside: interior lights only.
@@ -141,3 +143,10 @@ Useful links:
 - **2026-11-14:** v0 deployed to Vercel at https://korean-resturant-proj-uni.vercel.app (auto-deploy off).
 - **2026-11-14:** smoothness pass (auto quality, FXAA, area lighting, preloading, lighter models).
   - Committed, **not yet deployed**. Waiting for the user's "deploy".
+- **2026-11-15:** v1 built from her feedback (Seoulicious, 12 slides, 30 booths, cashier + polaroid story, live station, main kitchen, realistic people).
+- **2026-11-16:** polish pass.
+  - Glare fix (kitchen pass, steel counters), glass-look bulbs.
+  - Livelier people (expressions, blinking, eye contact), 12 new avatars.
+  - "Say Kimchi!" polaroid corner next to the polaroid wall.
+  - Floor plan: every label visible.
+  - Smoother: lighter models, smarter Auto quality.

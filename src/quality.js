@@ -1,6 +1,7 @@
 // Picture quality: Auto / High / Low.
 // Auto watches the real frame rate and changes the render resolution so motion stays smooth:
-// below ~48 fps it renders fewer pixels, with spare headroom it goes sharper again.
+// below ~48 fps it renders fewer pixels, with spare headroom it goes sharper again. If that is not enough
+// (a slow CPU: too many draw calls, not too many pixels) it turns ambient occlusion off, which halves them.
 const KEY = 'uzma-quality';
 const MODES = ['auto', 'high', 'low'];
 
@@ -20,6 +21,7 @@ export class Quality {
     this.dpr = Math.min(this.max, 1.5);   // where Auto starts
     this.ceiling = this.max;
     this.acc = 0; this.frames = 0; this.good = 0; this.hold = 2; this.age = 0;
+    this.aoOff = false;   // Auto dropped ambient occlusion for this session
   }
 
   get label() { return { auto: 'Auto', high: 'High', low: 'Low', fixed: 'Fixed' }[this.mode]; }
@@ -32,7 +34,7 @@ export class Quality {
   setMode(m) {
     this.mode = m;
     try { localStorage.setItem(KEY, m); } catch { /* not saved, still works */ }
-    if (m === 'auto') { this.dpr = Math.min(this.max, 1.5); this.ceiling = this.max; this.hold = 2; }
+    if (m === 'auto') { this.dpr = Math.min(this.max, 1.5); this.ceiling = this.max; this.hold = 2; this.aoOff = false; }
     this.apply();
   }
 
@@ -51,7 +53,7 @@ export class Quality {
     this.composer.setPixelRatio(p);
     this.composer.setSize(w, h);
     this.bloom.enabled = this.mode !== 'low';
-    if (this.ao) this.ao.enabled = this.mode !== 'low';   // Low: no ambient occlusion (the costliest effect)
+    if (this.ao) this.ao.enabled = this.mode !== 'low' && !(this.mode === 'auto' && this.aoOff);   // Low: no ambient occlusion (the costliest effect)
     this.current = p;
     this.onChange?.(this);
   }
@@ -65,7 +67,10 @@ export class Quality {
     const fps = this.frames / this.acc;
     this.acc = 0; this.frames = 0;
     if (this.hold > 0) { this.hold--; return; }
-    if (fps < 48 && this.dpr > this.min + 0.01) {
+    if (fps < 48 && !this.aoOff && (fps < 34 || this.dpr <= 0.9)) {   // very slow, or fewer pixels did not help: drop AO once
+      this.aoOff = true; this.good = 0; this.hold = 2;
+      this.apply();
+    } else if (fps < 48 && this.dpr > this.min + 0.01) {
       this.ceiling = Math.max(this.min, this.dpr * 0.97);          // don't climb back to what was too slow
       this.dpr = Math.max(this.min, this.dpr * 0.8);
       this.good = 0; this.hold = 1;

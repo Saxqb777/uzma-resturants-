@@ -54,8 +54,8 @@ export function buildKitchen(ctx) {
     pm.dispose();
   }
   if (env) {
-    const brighten = (m, rough = 1) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = 1.05; c.roughness *= rough; return c; };
-    M = { ...M, steelBrushed: brighten(M.steelBrushed, 1.15), steel: brighten(M.steel, 1.1), whiteTile: brighten(M.whiteTile || M.kitchenTile), kitchenFloor: brighten(M.kitchenFloor || M.kitchenTile) };
+    const brighten = (m, rough = 1, envI = 1.05) => { const c = m.clone(); c.envMap = env; c.envMapIntensity = envI; c.roughness *= rough; return c; };   // satin, never a mirror: no hot spots
+    M = { ...M, steelBrushed: brighten(M.steelBrushed, 1.3), steel: brighten(M.steel, 1.45), whiteTile: brighten(M.whiteTile || M.kitchenTile), kitchenFloor: brighten(M.kitchenFloor || M.kitchenTile) };
   }
   const food = makeFoodKit(M);
   const rnd = T.rng(515);

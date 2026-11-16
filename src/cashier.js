@@ -587,6 +587,62 @@ function polaroidWall(g, M) {
       c.fillStyle = '#f2a7c3'; c.font = `40px ${FONTS.cute}`; c.fillText('우리 가족 · thank you for the memories ♥', w2 / 2, 182);
     } });
   card(g, head, 1.65, 0.3, x - 0.02, 4.02, zc, -Math.PI / 2, 0.25);
+
+  // ---- "Say Kimchi!" corner: the wall between the window and the board (seen on the pin slide)
+  const zA = -0.3, zB = B.z0 - 0.1, zm = (zA + zB) / 2, span = zA - zB;
+  const kimchi = T.sign({ w: 1000, h: 470, bg: 'rgba(0,0,0,0)', border: null, aged: 0, seed: 41,
+    fonts: [{ font: FONTS.neon, text: 'Say Kimchi!' }, { font: FONTS.cute, text: '김치~! 하나 둘 셋 smile' }, { font: FONTS.round, text: 'Polaroid AED 5' }],
+    draw: (c, w2, h2) => {
+      // pink rounded board with a scalloped teal trim
+      const rr = (x0, y0, ww, hh, r0) => { c.beginPath(); c.moveTo(x0 + r0, y0); c.arcTo(x0 + ww, y0, x0 + ww, y0 + hh, r0); c.arcTo(x0 + ww, y0 + hh, x0, y0 + hh, r0); c.arcTo(x0, y0 + hh, x0, y0, r0); c.arcTo(x0, y0, x0 + ww, y0, r0); c.closePath(); };
+      c.fillStyle = '#5fc2b8'; rr(10, 10, w2 - 20, h2 - 20, 90); c.fill();
+      c.fillStyle = '#fff3f7'; rr(30, 30, w2 - 60, h2 - 60, 74); c.fill();
+      c.fillStyle = '#f6b5c9'; rr(46, 46, w2 - 92, h2 - 92, 62); c.fill();
+      // little camera icon
+      c.save(); c.translate(150, 170); c.fillStyle = '#ffffff';
+      rr(-62, -38, 124, 86, 18); c.fill(); c.fillRect(-26, -54, 52, 20);
+      c.fillStyle = '#2f8f8a'; c.beginPath(); c.arc(0, 6, 28, 0, 7); c.fill(); c.fillStyle = '#bfeee8'; c.beginPath(); c.arc(0, 6, 16, 0, 7); c.fill();
+      c.fillStyle = '#ffd35c'; c.beginPath(); c.arc(42, -22, 7, 0, 7); c.fill(); c.restore();
+      // hearts
+      const heart = (hx, hy, s, col) => { c.save(); c.translate(hx, hy); c.scale(s, s); c.fillStyle = col; c.beginPath(); c.moveTo(0, 10); c.bezierCurveTo(-26, -8, -12, -30, 0, -14); c.bezierCurveTo(12, -30, 26, -8, 0, 10); c.fill(); c.restore(); };
+      heart(860, 120, 1.6, '#ffffff'); heart(900, 170, 1.0, '#e889ab'); heart(120, 360, 1.1, '#ffffff');
+      // lettering
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = `150px ${FONTS.neon}`; c.lineJoin = 'round'; c.lineWidth = 16; c.strokeStyle = '#c23b6a'; c.strokeText('Say Kimchi!', w2 / 2 + 40, 185);
+      c.fillStyle = '#ffffff'; c.fillText('Say Kimchi!', w2 / 2 + 40, 185);
+      c.font = `54px ${FONTS.cute}`; c.fillStyle = '#7a3350'; c.fillText('김치~! 하나 둘 셋 smile', w2 / 2, 300);
+      c.fillStyle = '#2f8f8a'; rr(w2 / 2 - 190, 340, 380, 74, 37); c.fill();
+      c.font = `600 46px ${FONTS.round}`; c.fillStyle = '#ffffff'; c.fillText('Polaroid · AED 5', w2 / 2, 379);
+    } });
+  const kMat = new THREE.MeshStandardMaterial({ map: kimchi, transparent: true, alphaTest: 0.05, roughness: 0.55, emissive: '#ffffff', emissiveMap: kimchi, emissiveIntensity: 0.22 });
+  const km = new THREE.Mesh(new THREE.PlaneGeometry(span * 0.92, span * 0.92 * 0.47), kMat);
+  km.position.set(x - 0.012, 2.62, zm); km.rotation.y = -Math.PI / 2; km.userData.keep = true; g.add(km);
+  // two sagging strings of polaroids with fairy lights under it
+  const fairy2 = new InstanceBatch(bulbGeo, fairy.mat || new THREE.MeshStandardMaterial({ color: '#fff4d6', emissive: '#ffd89a', emissiveIntensity: 3.5 }), { cast: false, receive: false });
+  const clip2 = new InstanceBatch(new THREE.BoxGeometry(0.006, 0.03, 0.012), new THREE.MeshStandardMaterial({ color: '#c8a46e', roughness: 0.7 }), { cast: false });
+  const hung2 = [];
+  for (const [y0, sag, n] of [[2.18, 0.12, 6], [1.74, 0.1, 5]]) {
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24, zz = zA - 0.02 - t * (span - 0.04), yy = y0 - Math.sin(t * Math.PI) * sag;
+      pts.push(new THREE.Vector3(x - 0.05, yy, zz));
+      if (i % 2) fairy2.add(x - 0.05, yy - 0.012, zz);
+      const k = Math.round((i / 24) * (n + 1));
+      if (i > 0 && i < 24 && Math.abs(i / 24 * (n + 1) - k) < 0.5 / 24 * (n + 1) && k >= 1 && k <= n) {
+        clip2.add(x - 0.05, yy - 0.02, zz);
+        hung2.push({ x: x - 0.052, y: yy - 0.09, z: zz, ry: -Math.PI / 2, rz: (r() - 0.5) * 0.2, cell: cell++, s: 1.25 });
+      }
+    }
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#3a2a20' })));
+  }
+  g.add(polaroidMesh(hung2, atlas, mat));
+  fairy2.build(g); clip2.build(g);
+  // a small floating oak shelf: instax camera, a bunny plush and a succulent
+  box(g, M.woodOak || M.woodBooth, 0.2, 0.03, span * 0.7, x - 0.1, 1.2, zm, { cast: true });
+  for (const zz of [zm - span * 0.28, zm + span * 0.28]) box(g, std('#f2a7c3', { roughness: 0.5 }), 0.16, 0.08, 0.02, x - 0.085, 1.12, zz, { cast: false });
+  instax(g, x - 0.12, 1.215 + 0.06, zm + 0.22);
+  plush(g, 'bunny', x - 0.12, 1.215, zm - 0.05, -Math.PI / 2);
+  succulent(g, x - 0.11, 1.215, zm - 0.32, '#f8f0e3');
 }
 
 // ------------------------------------------------------------------ 2-seat nook by the window, separated by a planter

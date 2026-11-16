@@ -151,8 +151,9 @@ function shell(g, M, W) {
   seg(P.x0, P.x1, 0, P.y0); seg(P.x0, P.x1, P.y1, H);
   seg(P.x1, dR - dw, 0, H); seg(dR - dw, dR + dw, 2.2, H); seg(dR + dw, x1, 0, H);
   // pass shelf (steel), heat lamp
-  box(g, M.steelBrushed, P.x1 - P.x0 + 0.1, 0.05, 0.7, 0, P.y0, wz, { cast: false });
-  const heat = new THREE.MeshStandardMaterial({ color: '#552010', emissive: '#ff6a2a', emissiveIntensity: 2.0 });
+  const shelfMat = M.steelBrushed.clone(); shelfMat.roughness = 0.85; shelfMat.envMapIntensity = 0.8;   // satin: no mirror glare under the heat lamp
+  box(g, shelfMat, P.x1 - P.x0 + 0.1, 0.05, 0.7, 0, P.y0, wz, { cast: false });
+  const heat = new THREE.MeshStandardMaterial({ color: '#552010', emissive: '#ff6a2a', emissiveIntensity: 1.4 });
   box(g, M.blackSteel, P.x1 - P.x0, 0.06, 0.12, 0, P.y1 - 0.12, wz, { cast: false });
   box(g, heat, P.x1 - P.x0 - 0.1, 0.012, 0.06, 0, P.y1 - 0.132, wz, { cast: false });
   // swing doors with round windows

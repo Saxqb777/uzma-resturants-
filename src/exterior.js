@@ -1,14 +1,14 @@
 // OUTSIDE of Seoulicious, a Korean BBQ in Abu Dhabi: the 15.6 m wide shop front and a bit of street.
 //
 //   brick piers · weathered wood · two big grid windows framed by a few vines · a pair of glass doors
-//   up three wooden deck steps · rusty corrugated tin awning · bilingual painted billboard
-//   (English + Arabic) · black hanok-style tiled eave with warm downlights · vertical lightbox ·
+//   up three wooden deck steps · rusty corrugated tin awning · illuminated bilingual billboard
+//   (English + Arabic channel letters, neon border) · black hanok-style tiled eave with warm downlights · vertical lightbox ·
 //   paper lantern · barn lamps · two A-frame boards with the meal deal · Abu Dhabi number plate.
 //
 // Everything is built under the group named 'exterior' (the zone lighting relies on that name);
 // the upper floors go in ctx.roof so the floor-plan view can lift them off.
-// Real lights outside (6): eave wash, two barn-lamp pools (the left one casts shadows), lightbox
-// glow, lantern glow, street lamp. Everything else glows with emissive materials + bloom.
+// Real lights outside (6): the sign's coral spill, two barn-lamp pools (the left one casts shadows),
+// lightbox glow, lantern glow, street lamp. Everything else glows with emissive materials + bloom.
 // Every texture with text goes through T.sign so the Korean/Arabic web fonts are redrawn once loaded.
 import * as THREE from 'three';
 import { box, plane, corrugatedGeometry, InstanceBatch, pointLight, spotLight, mergeStatic } from './helpers.js';
@@ -338,8 +338,8 @@ function dealParts(R, deal) {
 // Brand palette (matches the pink / teal / yellow inside the restaurant)
 const BRAND = {
   teal: '#17595a', tealDeep: '#0d3a3c', tealNeon: '#5fc2b8', pink: '#ff4f8b', pinkSoft: '#f2a7c3', yellow: '#ffd35c',
-  en: [[0, '#ffc54d'], [0.42, '#ff7d3a'], [1, '#ff2f50']],          // hot orange -> coral red
-  ar: [[0, '#ff7fae'], [0.45, '#ff4f8b'], [1, '#ff7a52']],          // hot pink -> coral
+  en: [[0, '#ffae3c'], [0.42, '#ff6f34'], [1, '#ff2a4c']],          // hot orange -> coral red
+  ar: [[0, '#ff6aa0'], [0.45, '#ff4f8b'], [1, '#ff7048']],          // hot pink -> coral
   gold: [[0, '#fff3b8'], [0.55, '#ffd35c'], [1, '#ffb23a']],
 };
 const brandFont = (F) => F.brand || F.display;
@@ -378,7 +378,7 @@ function glowWord(c, text, x, y, o) {
   l.fillStyle = gr; l.fillText(text, bx + 2.0 * k, by + 3.0 * k);
   // soft sheen over the upper half of the face
   const sh = l.createLinearGradient(0, top, 0, top + (bot - top) * 0.55);
-  sh.addColorStop(0, 'rgba(255,255,255,0.28)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+  sh.addColorStop(0, 'rgba(255,255,255,0.16)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
   l.fillStyle = sh; l.fillRect(-W, top, W * 3, (bot - top) * 0.55);
   c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(lc, 0, 0); c.restore();
   // trim cap (skipped for Arabic: its joined letters are overlapping contours, a stroke would show seams)

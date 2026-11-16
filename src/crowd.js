@@ -8,6 +8,34 @@ import { CASHIER } from './cashier.js';
 import { KITCHEN_SPOTS } from './kitchen.js';
 import { STAFF, SCENES } from './config.js';
 import * as T from './textures.js';
+import { mergeStatic } from './helpers.js';
+
+// Background guests are frozen (static) people. To keep the frame rate up they are also
+// simplified to ~40% of their triangles (invisible at table distance) and merged per material.
+let Simplifier = null;
+async function loadSimplifier() {
+  try {
+    const m = await import('https://cdn.jsdelivr.net/npm/meshoptimizer@0.20.0/meshopt_simplifier.module.js');
+    await m.MeshoptSimplifier.ready;
+    Simplifier = m.MeshoptSimplifier;
+  } catch { Simplifier = null; }   // no simplifier: people just stay full detail
+}
+function simplify(person, ratio = 0.4) {
+  if (!Simplifier) return;
+  person.traverse((o) => {
+    if (!o.isMesh || o.isSkinnedMesh) return;
+    const geo = o.geometry, mat = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (!geo.index || geo.index.count < 2400 || geo.userData.simplified) return;
+    if (mat.transparent || mat.alphaTest > 0) return;            // hair cards, lashes: leave alone
+    const pos = geo.attributes.position;
+    if (pos.isInterleavedBufferAttribute) return;
+    const idx = new Uint32Array(geo.index.array);
+    const target = Math.floor((idx.length * ratio) / 3) * 3;
+    const [out] = Simplifier.simplify(idx, new Float32Array(pos.array), 3, target, 0.02);
+    geo.setIndex(new THREE.BufferAttribute(out, 1));
+    geo.userData.simplified = true;
+  });
+}
 
 // Staff avatars are chosen by hand: modest, tidy outfits that suit a uniform apron.
 const STAFF_AVATAR = {
@@ -34,10 +62,11 @@ const SEAT_POSES = ['sit-eat', 'sit-eat', 'sit-talk', 'sit-eat', 'sit-cheers', '
 
 export async function buildCrowd(ctx, story) {
   const { scene, animators, renderer } = ctx;
-  await loadPeople({});
+  await Promise.all([loadPeople({}), loadSimplifier()]);
   const all = listPeople();
   const has = (id) => all.some((p) => p.id === id);
   const g = new THREE.Group(); g.name = 'interior'; scene.add(g);
+  const frozen = new THREE.Group(); frozen.name = 'frozen'; g.add(frozen);      // static people: simplified + merged at the end
   const animated = [];
   const r = T.rng(4242);
 
@@ -45,8 +74,8 @@ export async function buildCrowd(ctx, story) {
     if (!has(id)) return null;
     const p = createPerson(id, { seed: Math.floor(r() * 1e6), ...opts, static: !animate });
     p.position.set(x, 0, z); p.rotation.y = ry;
-    g.add(p);
-    if (animate && p.userData.update) animated.push(p);
+    if (animate) { p.userData.keep = true; g.add(p); if (p.userData.update) animated.push(p); }
+    else { simplify(p); frozen.add(p); }
     return p;
   };
   // a world-space point expressed in the local space of a person standing at (x, z) with rotation ry
@@ -120,10 +149,11 @@ export async function buildCrowd(ctx, story) {
       } else if (/child/i.test((all.find((p) => p.id === id) || {}).ageGroup || '')) {
         pose = 'sit-eat';
       }
-      place(id, seat.x, seat.z, seat.ry, { pose, ...opts }, close || r() < 0.35);
+      place(id, seat.x, seat.z, seat.ry, { pose, ...opts }, close || r() < 0.12);
     });
   }
 
+  mergeStatic(frozen);
   animators.push((t, dt) => { for (const p of animated) if (p.visible) p.userData.update(t, dt); });
 
   // ------------------------------------------------------------ the new polaroid

@@ -110,7 +110,7 @@ function neonTexture(lines, { w = 1024, h = 360, seed = 1 } = {}) {
     },
   });
 }
-function neon(parent, tex, w, h, x, y, z, ry, strength = 2.4) {
+function neon(parent, tex, w, h, x, y, z, ry, strength = 3.0) {
   const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, color: new THREE.Color(strength, strength, strength) });
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
   m.position.set(x, y, z); m.rotation.y = ry; m.userData.keep = true; m.renderOrder = 2;

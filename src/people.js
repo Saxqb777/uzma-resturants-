@@ -7,12 +7,13 @@
  *   https://github.com/microsoft/Microsoft-Rocketbox
  *   Converted from the original FBX + TGA files to GLB: one mesh each (the Export FBX files only
  *   contain the "hipoly_81_bones" mesh, ~7-9k triangles), webp textures (1024 px body/head,
- *   512 px hair/opacity), meshopt-compressed geometry. 0.26-0.65 MB per avatar, 9 MB in total.
+ *   512 px hair/opacity), meshopt-compressed geometry. 0.26-0.60 MB per avatar, 14.8 MB for all 33.
  *   Aprons, hats, name tags and hand props are generated here in code.
  *
  * FILES
- *   assets/people/manifest.json   [{ id, file, sex, ageGroup, notes, height, scale, source, builtin?, defaultUniform? }]
- *                                 height = real height in meters incl. hair/headwear (after scale)
+ *   assets/people/manifest.json   [{ id, file, sex, ageGroup, notes, height, scale, source, expr?, builtin?, defaultUniform? }]
+ *                                 height = real height in meters incl. hair/headwear (after scale);
+ *                                 expr = how strongly this face rig needs to be driven (default 1)
  *   assets/people/<id>.glb        needs EXT_meshopt_compression + EXT_texture_webp (handled below)
  *
  * IMPORT MAP (same as index.html)
@@ -42,15 +43,32 @@
  *                   photo camera, pin polaroid). null: empty hands. Other props in stand / stand-talk /
  *                   sit / sit-talk: the right hand brings them up in front (glass upright, phone facing
  *                   the eyes, tray on a raised palm); in other poses the right hand just closes on them.
- *     opts.seed     number: small variation (head turn, arm offsets, animation timing)
- *     opts.lookAt   THREE.Vector3 in the person's local space to face (e.g. a table partner's head)
+ *     opts.mood     'smile' | 'laugh' | 'talk' | 'focus' | 'neutral'. Facial expression, driven by the face
+ *                   bones: smile = soft closed-mouth smile that now and then opens up; laugh = open smile
+ *                   with laughs (head back, shoulders bounce, eyes squint); talk = speaking and listening
+ *                   turns (lips move, brows, nods, attentive smile); focus = relaxed concentration, smiles
+ *                   when glancing up at guests; neutral = no expression. Defaults per pose: sit-talk and
+ *                   stand-talk talk, sit-cheers laugh, cook-stir / cook-flip / prep-chop focus, all others
+ *                   smile. Every mood blinks (every 2-6 s) and moves the eyes; nobody stares straight ahead.
+ *     opts.seed     number: the person's own variation: which leg carries the weight, what the free hand
+ *                   does (on the table, forearm across, in the lap), head tilt, lean, how much they smile,
+ *                   who they glance at and when. Different seeds = visibly different people.
+ *     opts.lookAt   THREE.Vector3 in the person's local space: who/what they mainly look at (e.g. a table
+ *                   partner's head). Eyes and head turn to it, seated people also turn their shoulders a
+ *                   little. They still glance at the other seats and the food in between.
+ *     opts.face     advanced: extra face action-unit weights added on top of the mood, e.g. { browUp: 0.5 }
+ *                   (units: smile, grin, jaw, lipsOpen, oo, ee, press, blink, lidDown, squint, browUp, browIn,
+ *                   browSoft)
  *     opts.target   'pin' only: THREE.Vector3 (local) where the photo goes; default a wall 0.35 m ahead
  *     opts.scale    override the manifest scale (1 = the original Rocketbox size)
- *     opts.static   true: bake the posed meshes into plain Meshes (CPU skinning once); no motion
+ *     opts.static   true: bake the posed meshes into plain Meshes (CPU skinning once); no motion. The bake
+ *                   freezes a moment of the person's motion picked by the seed, so expression, gaze,
+ *                   gesture and posture are baked in and differ from person to person.
  *     opts.shadows  cast/receive shadows (default true)
- *   group.userData.update(t, dt)   procedural motion, t in seconds (breathing, glances, chewing, talking,
- *                                  eating, stirring, chopping, tossing, waving). Does nothing when static.
- *   group.userData.person          { id, pose, uniform, holding, seated, height }
+ *   group.userData.update(t, dt)   procedural motion, t in seconds: breathing, posture sway, head turns
+ *                                  between partners with the eyes leading, blinks, talking, laughing, chewing,
+ *                                  eating, stirring, chopping, tossing, waving. Does nothing when static.
+ *   group.userData.person          { id, pose, mood, uniform, holding, seated, height }
  *   Also exported: SEAT_Y, TABLE_Y, TABLE_EDGE_Z, POSE_NAMES.
  *
  * SEATED CONTRACT (all sit-* poses)
@@ -70,20 +88,27 @@
  *             woman-abaya-black (Female_Adult_10), woman-brown-dress (Female_Adult_11),
  *             woman-young-hoodie (Female_Adult_12), woman-blonde-pink (Female_Adult_01),
  *             woman-auburn-blue (Female_Adult_15), woman-black-suit (Business_Female_01),
- *             woman-asian-beige-suit (Business_Female_03)
+ *             woman-asian-beige-suit (Business_Female_03), woman-senior-cream (Female_Adult_02),
+ *             woman-pink-blazer (Female_Adult_05), woman-brown-jacket (Female_Adult_07),
+ *             woman-grey-tee (Female_Adult_08), woman-cardigan-brown (Female_Adult_09),
+ *             woman-short-blonde-vest (Female_Adult_13), woman-beige-cardigan (Female_Adult_14)
  *   men:      man-asian-black-tee (Male_Adult_09), man-asian-red-track (Male_Adult_10),
  *             man-asian-navy-suit (Business_Male_02), man-emirati-ghutra (Male_Adult_19),
  *             man-white-kurta (Male_Adult_15), man-black-denim (Male_Adult_12),
  *             man-cap-tracksuit (Male_Adult_17), man-older-tweed (Male_Adult_03),
- *             man-grey-beard-vest (Male_Adult_05)
+ *             man-grey-beard-vest (Male_Adult_05), man-afro-hoodie (Male_Adult_04),
+ *             man-blazer-rust (Male_Adult_07), man-balding-argyle (Male_Adult_13),
+ *             man-blond-blue-tee (Male_Adult_16), man-emirati-kandura (Male_Adult_21)
  *   children: girl-hijab-green (Female_Child_02), boy-orange-jersey (Male_Child_02)
  *   staff:    chef-female (Professions/Chef_Female_01: white chef coat, long apron and cap built in)
  *
  * NOTES
  *   - Materials: MeshStandardMaterial, metalness 0, roughness 0.6-0.85, normal maps, hair/lashes with
- *     alphaTest 0.5 (no sorting issues). They look right under the ACES tone mapping + scene.environment
- *     used in main.js; nothing else is needed.
- *   - Cost: an animated person is 5-6 SkinnedMesh draw calls (~9-11k triangles); update() is ~0.05 ms.
+ *     alphaTest 0.5 (no sorting issues). The head and body materials carry a small shader addition
+ *     (onBeforeCompile): skin texels get wrap lighting, a warm scatter band where light turns to shadow
+ *     and a satin finish; eyeballs are glossy and pick up catchlights. Tuned for the ACES tone mapping +
+ *     warm HDR scene.environment used in main.js; nothing else is needed.
+ *   - Cost: an animated person is 5-6 SkinnedMesh draw calls (~9-11k triangles); update() is ~0.08 ms.
  *     createPerson takes ~4-13 ms. For background crowds use { static: true } (plain meshes, no bones).
  *   - Shadows: if the renderer's shadowMap.autoUpdate is false, set renderer.shadowMap.needsUpdate = true
  *     after adding people (animated people then keep their first-frame shadow).
@@ -605,7 +630,7 @@ function relaxedArm(r, s, rng, extra = {}) {
   const sh = r.wp(`${s} UpperArm`);
   const len = r.D.upperArm + r.D.forearm;
   const hipW = hipHalfWidth(t) * r.k;
-  const x = sideX(s) * (hipW + 0.045 + rng() * 0.015);
+  const x = r.wp('Pelvis').x + sideX(s) * (hipW + 0.045 + rng() * 0.015);
   const pos = V(x, sh.y - len * 0.94, 0.015 + rng() * 0.03);
   arm(r, s, {
     pos,
@@ -628,8 +653,42 @@ function hipHalfWidth(t) {
   return (t.cache.hipW = Math.min(w, 0.26));
 }
 
+// ---- standing: weight on one leg (hip out and up on that side, the other knee soft, shoulders counter-tilted)
+function standBody(r, c, amt = 1) {
+  const side = c.v.side, a = amt * (0.65 + 0.35 * c.v.lean), k = r.k;
+  const ankle = { L: r.wp('L Foot'), R: r.wp('R Foot') };
+  r.setRootPos(r.wp('Root').add(V(side * 0.03 * a * k, -0.007 * a * k, 0.004 * a * k)));
+  r.rotW('Pelvis', FWD, side * 3.2 * DEG * a);
+  const free = side > 0 ? 'R' : 'L';
+  ankle[free].add(V(-side * 0.025 * a * k, 0, 0.04 * a * k));          // the free foot rests a little forward and out
+  for (const s of ['L', 'R']) {
+    const hip = r.wp(`${s} Thigh`);
+    r.ik(`${s} Thigh`, `${s} Calf`, `${s} Foot`, ankle[s], hip.clone().add(V(sideX(s) * 0.08, 0, 1)), r.tpl.hinge[`${s}leg`]);
+    r.footFlat(s, s === free ? sideX(s) * 9 * DEG * a : 0, 0);
+  }
+  r.rotW('Spine1', FWD, -side * 2.6 * DEG * a);
+  r.rotW('Spine2', FWD, -side * 2.2 * DEG * a);
+  r.rotW('Spine2', UP, -side * 3 * DEG * a * c.v.yaw);
+}
+
+// ---- seated: what the hand that isn't busy does
+function restArm(r, c, s, kind) {
+  const sx = sideX(s), k = r.k;
+  if (kind === 'lap') {
+    const hip = r.wp(`${s} Thigh`), knee = r.wp(`${s} Calf`);
+    const pos = hip.clone().lerp(knee, 0.62).add(V(sx * 0.01, 0.085 * k, 0));
+    arm(r, s, { pos, pole: V(sx * 0.55, -0.3, -0.8), hand: { dir: V(-sx * 0.3, -0.12, 1), palm: V(-sx * 0.15, -1, 0) }, grip: 'relaxed', twist: 0.5 });
+  } else if (kind === 'inward') {
+    // forearm lying across the table edge, hand towards the middle
+    solveTableArm(r, s, { pos: V(sx * 0.075, TABLE_Y + 0.034, TABLE_EDGE_Z + 0.085 * REACH - (1 - REACH) * 0.04), pole: V(sx * 0.8, -0.55, -0.25), hand: { dir: V(-sx * 0.9, -0.03, 0.42), palm: V(0, -1, 0) }, grip: 'relaxed', twist: 0.5 });
+  } else {
+    solveTableArm(r, s, tableHand(sx * (0.155 + 0.03 * c.v.lean), 0.05 + 0.04 * c.v.arm2));
+  }
+}
+const pickArm = (x, table, inward) => (x < table ? 'table' : x < table + inward ? 'inward' : 'lap');
+
 // ---- seated base: pelvis on the seat, thighs forward, feet on the floor (or hanging for kids)
-function seatBody(r, rng, { lean = 12 * DEG, yaw = 0 } = {}) {
+function seatBody(r, rng, { lean = 12 * DEG, yaw = 0, roll = 0 } = {}) {
   const t = r.tpl, D = r.D;
   // children sit further forward and more upright (the table is at their chest)
   const hipZ = -(D.thigh * (D.child ? 0.32 : 0.45));
@@ -640,7 +699,7 @@ function seatBody(r, rng, { lean = 12 * DEG, yaw = 0 } = {}) {
   r.setRootPos(V(0, hipY, hipZ).sub(off));
   // slight posterior pelvic tilt is part of sitting; the spine leans forward over it
   r.rotW('Pelvis', RIGHT_X, -5 * DEG);
-  r.leanTo(lean, yaw, 0);
+  r.leanTo(lean, yaw, roll);
   // legs: feet on the floor when they reach with the thighs at most ~15 degrees down, else they hang
   for (const s of ['L', 'R']) {
     const hip = r.wp(`${s} Thigh`);
@@ -717,89 +776,107 @@ function solveTableArm(r, s, spec) {
 
 // ----------------------------------------------------------------------------------- poses
 // Each pose: build(r, ctx, phase) poses the rig from rest. samples: phase values precomputed for
-// animation; drive(t, ctx) -> fractional sample index. idle: additive breathing/head motion.
+// animation; drive(t, ctx) -> fractional sample index. idle: additive motion (breathing, sway, glances).
+// gaze: who/what the person looks at over time (see gazeTargets). c.v holds the person's fixed variation.
+const seatTurn = (c, max = 14) => (c.lookTarget ? clamp(Math.atan2(c.lookTarget.x, Math.max(0.2, c.lookTarget.z)) * 0.35, -max * DEG, max * DEG) : c.v.yaw * 7 * DEG);
 const POSES = {
   stand: {
     samples: [0],
+    gaze: 'front',
     build(r, c) {
-      r.lean(c.rnd(-1, 2) * DEG, c.rnd(-3, 3) * DEG, c.rnd(-1.5, 1.5) * DEG);
+      standBody(r, c, 1);
+      r.lean(c.rnd(-1, 2) * DEG, c.rnd(-3, 3) * DEG, 0);
       relaxedArm(r, 'L', c.rng); relaxedArm(r, 'R', c.rng);
       c.lookDefault(r);
     },
-    idle: { look: 1, breathe: 1 },
+    idle: { look: 0.6, breathe: 1, sway: 1 },
   },
   'stand-talk': {
     samples: [0, 1, 2],
     cyclic: true,
+    gaze: 'front',
     build(r, c, p) {
+      standBody(r, c, 0.9);
       r.lean(c.rnd(0, 2) * DEG, c.rnd(-4, 4) * DEG, 0);
       relaxedArm(r, 'L', c.rng);
-      const g = [V(-0.17, 0, 0.24), V(-0.12, 0.05, 0.27), V(-0.2, 0.02, 0.2)][p];
+      const g = [V(-0.17, 0, 0.24), V(-0.12, 0.06, 0.28), V(-0.22, 0.03, 0.2)][p];
+      const px = r.wp('Pelvis').x;
       arm(r, 'R', {
-        pos: V(g.x, c.D.hipY + 0.13 + g.y, g.z), pole: V(-0.35, -0.6, -0.4),
-        hand: { dir: V(0.35, 0.1, 1), palm: V(0.45, 0.9, 0) }, grip: 'open', twist: 0.5,
+        pos: V(px + g.x, c.D.hipY + 0.14 + g.y, g.z), pole: V(-0.35, -0.6, -0.4),
+        hand: { dir: V(0.35, 0.1 + p * 0.1, 1), palm: V(0.45, 0.9, 0) }, grip: 'open', twist: 0.5,
       });
       c.lookDefault(r);
     },
     drive: (t, c) => 1 + Math.sin(t * 0.9 + c.ph) * 0.8 + Math.sin(t * 2.1 + c.ph * 2) * 0.2,
-    idle: { look: 0.6, breathe: 1, talk: 1 },
+    idle: { look: 0.5, breathe: 1, sway: 0.8 },
   },
   wave: {
     samples: [0, 1],
+    gaze: 'front',
     build(r, c, p) {
-      r.lean(0, c.rnd(-3, 3) * DEG, -2 * DEG);
+      standBody(r, c, 0.8);
+      r.lean(0, c.rnd(-3, 3) * DEG, 0);
       relaxedArm(r, 'L', c.rng);
       const e = r.eyes();
       arm(r, 'R', {
-        pos: V(-0.33 + (p - 0.5) * 0.1, e.y - 0.02, 0.1), pole: V(-0.7, -0.5, -0.1), shrug: 8 * DEG,
+        pos: V(e.x - 0.33 + (p - 0.5) * 0.1, e.y - 0.02, 0.1), pole: V(-0.7, -0.5, -0.1), shrug: 8 * DEG,
         hand: { dir: V(-0.1 - (p - 0.5) * 0.9, 1, 0.08), palm: V(0, 0.05, 1) }, grip: 'wave', twist: 0.4,
       });
       c.lookDefault(r);
     },
     drive: (t, c) => 0.5 + 0.5 * Math.sin(t * 9.0 + c.ph),
-    idle: { look: 0.4, breathe: 1 },
+    idle: { look: 0.3, breathe: 1, sway: 0.6 },
   },
   cashier: {
     samples: [0, 1],
+    gaze: 'cashier',
     build(r, c, p) {
+      standBody(r, c, 0.45);
       r.lean(7 * DEG, c.rnd(-3, 3) * DEG, 0);
       const y = 1.02 + 0.035;
       arm(r, 'L', { pos: V(0.15, y + (1 - p) * 0.012, 0.4), pole: V(0.45, -0.8, -0.4), hand: { dir: V(-0.2, -0.25, 1), palm: V(0, -1, 0.05) }, grip: 'relaxed', twist: 0.5 });
       arm(r, 'R', { pos: V(-0.12, y + p * 0.012, 0.42), pole: V(-0.45, -0.8, -0.4), hand: { dir: V(0.2, -0.25, 1), palm: V(0, -1, 0.05) }, grip: 'relaxed', twist: 0.5 });
-      r.look(V(0, 1.0, 0.45).lerp(V(0, 1.55, 1.6), 0.25), 0.9);
+      c.focus = V(0, 1.02, 0.5);
+      r.look(c.focus.clone().lerp(V(0, 1.55, 1.6), 0.25), 0.9);
     },
     drive: (t, c) => (Math.sin(t * 7 + c.ph) > 0.3 ? 1 : 0) * (Math.sin(t * 0.7 + c.ph) > -0.2 ? 1 : 0.2),
-    idle: { look: 0.5, breathe: 1, glanceUp: 1 },
+    idle: { look: 0.3, breathe: 1, sway: 0.3 },
   },
   'carry-tray': {
     samples: [0],
     defaultHolding: 'tray',
+    gaze: 'tray',
     build(r, c) {
+      standBody(r, c, 0.4);
       r.lean(-3 * DEG, 0, 0);
       const y = 1.08, z = 0.34, x = 0.215;
       arm(r, 'L', { pos: V(x, y, z), pole: V(0.5, -0.8, -0.5), hand: { thumb: V(0, 0.4, 1), palm: V(-1, 0.25, 0) }, grip: 'edge', twist: 0.6 });
       arm(r, 'R', { pos: V(-x, y, z), pole: V(-0.5, -0.8, -0.5), hand: { thumb: V(0, 0.4, 1), palm: V(1, 0.25, 0) }, grip: 'edge', twist: 0.6 });
-      c.lookDefault(r, 0.6);
+      c.tray = V(0, y, z + 0.1);
+      c.lookDefault(r, 0.7);
     },
-    idle: { look: 0.5, breathe: 0.6 },
+    idle: { look: 0.4, breathe: 0.6, sway: 0.25 },
   },
   photo: {
     samples: [0],
     defaultHolding: 'camera',
+    gaze: 'fixed',
     build(r, c) {
+      standBody(r, c, 0.5);
       r.lean(2 * DEG, 0, 0);
-      r.look(V(0, r.eyes().y, 3), 1);
+      r.look(V(r.eyes().x, r.eyes().y, 3), 1);
       const e = r.eyes();
       const cam = e.clone().add(V(-0.025, -0.005, 0.105));
-      c.camCenter = cam;
+      c.camCenter = cam; c.focus = V(e.x, e.y, 3);
       arm(r, 'R', { pos: cam.clone().add(V(-0.1, -0.035, -0.035)), pole: V(-0.25, -1, 0.1), hand: { thumb: V(0.2, 0.6, -0.6), palm: V(1, 0, 0.15) }, grip: 'edge', twist: 0.6 });
       arm(r, 'L', { pos: cam.clone().add(V(0.095, -0.06, -0.04)), pole: V(0.25, -1, 0.1), hand: { thumb: V(-0.2, 0.6, -0.6), palm: V(-1, 0.3, 0.1) }, grip: 'edge', twist: 0.6 });
     },
-    idle: { look: 0, breathe: 0.6 },
+    idle: { look: 0, breathe: 0.6, sway: 0.15, tilt: 0 },
   },
   pin: {
     samples: [0, 1],
     defaultHolding: 'polaroid',
+    gaze: 'fixed',
     build(r, c, p) {
       // where the photo goes: opts.target (local space) or ~eye height on a wall 0.35 m ahead
       const wallZ = c.target ? c.target.z : 0.35;
@@ -810,39 +887,44 @@ const POSES = {
       const photoX = c.target ? c.target.x : -0.08;
       const y = photoY - 0.1;
       const z = wallZ - 0.035 - p * 0.006;
-      c.pinPoint = V(photoX, photoY, wallZ);
+      c.pinPoint = V(photoX, photoY, wallZ); c.focus = c.pinPoint;
       r.look(c.pinPoint, 1);
       arm(r, 'R', { pos: V(photoX - 0.02, y, z), pole: V(-0.7, -0.6, -0.2), shrug: 12 * DEG, protract: 4 * DEG, hand: { dir: V(0.15, 1, 0.25), palm: V(0.1, 0, 1) }, grip: 'pinch', twist: 0.5 });
       arm(r, 'L', { pos: V(0.16, c.D.hipY + 0.2, 0.2), pole: V(0.4, -0.8, -0.4), hand: { thumb: V(-0.3, 0.5, 1), palm: V(-0.7, 0.6, 0) }, grip: 'pinch', twist: 0.5 });
     },
     drive: (t, c) => 0.5 + 0.5 * Math.sin(t * 1.3 + c.ph),
-    idle: { look: 0, breathe: 1 },
+    idle: { look: 0, breathe: 1, sway: 0.15 },
   },
   'cook-stir': {
     samples: [0, 1, 2, 3, 4, 5, 6, 7],
     cyclic: true,
     defaultHolding: 'ladle',
+    gaze: 'work',
     build(r, c, p) {
+      standBody(r, c, 0.45);
       r.lean(10 * DEG, 0, 0);
       const a = (p / 8) * Math.PI * 2;
       const pot = V(-0.06, 0.93, 0.42);
-      c.potCenter = pot;
+      c.potCenter = pot; c.focus = pot;
       arm(r, 'R', { pos: V(-0.1 + Math.cos(a) * 0.05, 1.15, 0.4 + Math.sin(a) * 0.045), pole: V(-0.6, -0.7, -0.4), hand: { thumb: V(0.1, 1, 0.25), palm: V(1, -0.15, 0.2) }, grip: 'handle', twist: 0.5 });
       arm(r, 'L', { pos: V(0.2, 0.975, 0.37), pole: V(0.5, -0.8, -0.4), hand: { dir: V(-0.3, -0.3, 1), palm: V(0, -1, 0) }, grip: 'relaxed', twist: 0.5 });
       r.look(pot, 0.85);
     },
     drive: (t, c) => (t * 0.6 + c.ph) * 8,
-    idle: { look: 0.2, breathe: 1 },
+    idle: { look: 0.2, breathe: 1, sway: 0.2 },
   },
   'cook-flip': {
     samples: [0, 1, 2],
     defaultHolding: 'pan',
+    gaze: 'work',
     build(r, c, p) {
+      standBody(r, c, 0.45);
       r.lean(9 * DEG, 0, 0);
       const lift = [0, 0.09, 0.03][p], tilt = [0, 32, -8][p] * DEG, push = [0, -0.04, 0.06][p];
       arm(r, 'R', { pos: V(-0.2, 1.0 + lift, 0.27 + push), pole: V(-0.6, -0.7, -0.4), hand: { thumb: V(0.1, Math.sin(0.3 + tilt), Math.cos(0.3 + tilt)), palm: V(0.6, -0.8, 0) }, grip: 'handle', twist: 0.5 });
       arm(r, 'L', { pos: V(0.19, 0.975, 0.36), pole: V(0.5, -0.8, -0.4), hand: { dir: V(-0.3, -0.3, 1), palm: V(0, -1, 0) }, grip: 'relaxed', twist: 0.5 });
-      r.look(V(-0.12, 0.95, 0.6), 0.85);
+      c.focus = V(-0.12, 0.95, 0.6);
+      r.look(c.focus, 0.85);
     },
     drive: (t, c) => {
       const T = 5 + (c.ph % 2), x = ((t + c.ph * 3) % T) / T * T; // seconds into the cycle
@@ -851,44 +933,50 @@ const POSES = {
       if (x < 0.45) return 1 + smooth((x - 0.25) / 0.2);
       return 2 - 2 * smooth((x - 0.45) / 0.3);
     },
-    idle: { look: 0.2, breathe: 1 },
+    idle: { look: 0.2, breathe: 1, sway: 0.2 },
   },
   'prep-chop': {
     samples: [0, 1],
     defaultHolding: 'knife',
+    gaze: 'work',
     build(r, c, p) {
+      standBody(r, c, 0.4);
       r.lean(13 * DEG, 0, 0);
       arm(r, 'R', { pos: V(-0.13, 1.075 - p * 0.05, 0.36), pole: V(-0.6, -0.7, -0.45), hand: { thumb: V(0.1, -0.1 - p * 0.1, 1), palm: V(1, 0, 0) }, grip: 'handle', twist: 0.5 });
       arm(r, 'L', { pos: V(0.06, 0.985, 0.39), pole: V(0.6, -0.7, -0.3), hand: { dir: V(-0.55, -0.6, 0.6), palm: V(0, -1, 0) }, grip: 'claw', twist: 0.5 });
-      r.look(V(-0.02, 0.92, 0.4), 0.9);
+      c.focus = V(-0.02, 0.92, 0.4);
+      r.look(c.focus, 0.9);
     },
     drive: (t, c) => {
       const x = (t + c.ph * 4) % 3.6;
       if (x > 2.6) return 0;
       return 0.5 - 0.5 * Math.cos(x * Math.PI * 2 * 2.4);
     },
-    idle: { look: 0.15, breathe: 1 },
+    idle: { look: 0.15, breathe: 1, sway: 0.15 },
   },
   sit: {
     seated: true,
     samples: [0],
+    gaze: 'table',
     build(r, c) {
-      seatBody(r, c.rng, { lean: c.rnd(15, 19) * DEG, yaw: c.rnd(-3, 3) * DEG });
-      solveTableArm(r, 'L', tableHand(0.16 + c.rnd(0, 0.03), 0.06 + c.rnd(0, 0.04)));
-      solveTableArm(r, 'R', tableHand(-0.15 - c.rnd(0, 0.03), 0.05 + c.rnd(0, 0.04)));
+      seatBody(r, c.rng, { lean: (13 + 8 * c.v.lean) * DEG, yaw: seatTurn(c), roll: c.v.roll * 3 * DEG });
+      let a = pickArm(c.v.arm, 0.35, 0.4), b = pickArm(c.v.arm2, 0.45, 0.35);
+      if (a === 'lap' && b === 'lap') b = 'table';
+      restArm(r, c, 'L', a); restArm(r, c, 'R', b);
       c.lookDefault(r);
     },
-    idle: { look: 1, breathe: 1 },
+    idle: { look: 0.6, breathe: 1, sway: 0.5 },
   },
   'sit-eat': {
     seated: true,
     samples: [0, 1],
     defaultHolding: 'chopsticks',
+    gaze: 'eat',
     build(r, c, p) {
-      seatBody(r, c.rng, { lean: (16 + p * 8) * DEG, yaw: 0 });
-      solveTableArm(r, 'L', tableHand(0.16, 0.06 + c.rnd(0, 0.03)));
+      seatBody(r, c.rng, { lean: (16 + p * 8) * DEG, yaw: c.v.yaw * 4 * DEG, roll: c.v.roll * 2 * DEG });
+      restArm(r, c, 'L', pickArm(c.v.arm, 0.55, 0.35));
       const bowl = V(-0.04, TABLE_Y + 0.03, TABLE_EDGE_Z + 0.2 * REACH);
-      c.bowl = bowl;
+      c.bowl = bowl; c.focus = bowl;
       if (p === 0) {
         r.look(bowl, 0.95);
         // chopsticks dipping into the bowl: fingers point forward-down
@@ -909,50 +997,54 @@ const POSES = {
       if (x < 1.9) return 1 - smooth((x - 1.2) / 0.7);
       return 0;
     },
-    idle: { look: 0.3, breathe: 1, chew: 1 },
+    idle: { look: 0.3, breathe: 1, chew: 1, sway: 0.35 },
   },
   'sit-talk': {
     seated: true,
     samples: [0, 1, 2],
     cyclic: true,
+    gaze: 'table',
     build(r, c, p) {
-      seatBody(r, c.rng, { lean: c.rnd(14, 17) * DEG, yaw: c.rnd(-4, 4) * DEG });
-      solveTableArm(r, 'L', tableHand(0.16, 0.06 + c.rnd(0, 0.03)));
-      const g = [V(-0.15, 0.13, 0.08), V(-0.11, 0.17, 0.12), V(-0.18, 0.15, 0.05)][p];
-      solveTableArm(r, 'R', { pos: V(g.x, TABLE_Y + g.y, TABLE_EDGE_Z + g.z * REACH - (1 - REACH) * 0.05), pole: V(-0.55, -0.75, -0.3), hand: { dir: V(0.35, 0.25, 1), palm: V(0.5, 0.85, -0.1) }, grip: 'open', twist: 0.55 });
+      seatBody(r, c.rng, { lean: (15 + 7 * c.v.lean) * DEG, yaw: seatTurn(c), roll: c.v.roll * 3 * DEG });
+      restArm(r, c, 'L', pickArm(c.v.arm, 0.4, 0.4));
+      const g = [V(-0.15, 0.13, 0.08), V(-0.1, 0.19, 0.13), V(-0.2, 0.15, 0.04)][p];
+      solveTableArm(r, 'R', { pos: V(g.x, TABLE_Y + g.y, TABLE_EDGE_Z + g.z * REACH - (1 - REACH) * 0.05), pole: V(-0.55, -0.75, -0.3), hand: { dir: V(0.35, 0.25 + p * 0.12, 1), palm: V(0.5, 0.85, -0.1) }, grip: 'open', twist: 0.55 });
       c.lookDefault(r);
     },
     drive: (t, c) => 1 + Math.sin(t * 0.8 + c.ph) * 0.85 + Math.sin(t * 1.9 + c.ph) * 0.15,
-    idle: { look: 0.6, breathe: 1, talk: 1 },
+    idle: { look: 0.5, breathe: 1, sway: 0.6 },
   },
   'sit-cheers': {
     seated: true,
     samples: [0, 1],
     defaultHolding: 'glass',
+    gaze: 'table',
     build(r, c, p) {
-      seatBody(r, c.rng, { lean: c.rnd(14, 17) * DEG, yaw: c.rnd(-2, 2) * DEG });
-      solveTableArm(r, 'L', tableHand(0.16, 0.06 + c.rnd(0, 0.03)));
+      seatBody(r, c.rng, { lean: (13 + 5 * c.v.lean) * DEG, yaw: seatTurn(c, 10), roll: c.v.roll * 2.5 * DEG });
+      restArm(r, c, 'L', pickArm(c.v.arm, 0.5, 0.3));
       const e = r.eyes();
-      const gp = V(-0.12, e.y - 0.1 + p * 0.025, TABLE_EDGE_Z + (0.08 + p * 0.03) * REACH - (1 - REACH) * 0.06);
+      const gp = V(e.x * 0.5 - 0.17, e.y - 0.17 + p * 0.03, TABLE_EDGE_Z + (0.13 + p * 0.04) * REACH - (1 - REACH) * 0.06);
       arm(r, 'R', { pos: gp, pole: V(-0.7, -0.7, -0.2), shrug: 6 * DEG, protract: 6 * DEG, hand: { thumb: V(0.05, 1, 0.1), palm: V(0.85, 0, -0.5) }, grip: 'cylinder', twist: 0.5 });
-      r.look(c.lookTarget || V(0, e.y + 0.05, 1.1), 0.9);
+      c.focus = c.lookTarget || V(c.v.side * 0.2, e.y + 0.05, 1.1);
+      r.look(c.focus, 0.9);
     },
     drive: (t, c) => { const x = (t + c.ph * 3) % 4.5; return x < 0.35 ? smooth(x / 0.35) : x < 0.6 ? 1 : x < 1.1 ? 1 - smooth((x - 0.6) / 0.5) : 0; },
-    idle: { look: 0.2, breathe: 1 },
+    idle: { look: 0.3, breathe: 1, sway: 0.5 },
   },
   'sit-phone': {
     seated: true,
     samples: [0],
     defaultHolding: 'phone',
+    gaze: 'phone',
     build(r, c) {
-      seatBody(r, c.rng, { lean: c.rnd(19, 23) * DEG, yaw: 0 });
+      seatBody(r, c.rng, { lean: (18 + 5 * c.v.lean) * DEG, yaw: c.v.yaw * 3 * DEG, roll: c.v.roll * 2.5 * DEG });
       const ph = V(0, TABLE_Y + 0.15, TABLE_EDGE_Z + 0.07 * REACH - (1 - REACH) * 0.06);
-      c.phoneCenter = ph;
+      c.phoneCenter = ph; c.focus = ph;
       r.look(ph, 1);
       arm(r, 'L', { pos: ph.clone().add(V(0.06, -0.035, -0.06)), pole: V(0.5, -0.8, -0.3), hand: { thumb: V(-0.3, 0.7, 0.6), palm: V(-0.75, 0.45, -0.3) }, grip: 'phone', twist: 0.55 });
       arm(r, 'R', { pos: ph.clone().add(V(-0.06, -0.035, -0.06)), pole: V(-0.5, -0.8, -0.3), hand: { thumb: V(0.3, 0.7, 0.6), palm: V(0.75, 0.45, -0.3) }, grip: 'phone', twist: 0.55 });
     },
-    idle: { look: 0, breathe: 1, thumb: 1 },
+    idle: { look: 0, breathe: 1, thumb: 1, sway: 0.3 },
   },
 };
 export const POSE_NAMES = Object.keys(POSES);
@@ -964,6 +1056,8 @@ export function createPerson(id, opts = {}) {
   const poseName = opts.pose || 'stand';
   const pose = POSES[poseName];
   if (!pose) throw new Error(`people: unknown pose "${poseName}"`);
+  const moodName = opts.mood || POSE_MOOD[poseName] || 'smile';
+  if (!MOODS[moodName]) throw new Error(`people: unknown mood "${moodName}"`);
   const seed = opts.seed ?? hashString(id + poseName);
   const rng = mulberry32((seed * 2654435761) >>> 0);
   const builtin = tpl.entry.builtin || [];
@@ -983,16 +1077,20 @@ export function createPerson(id, opts = {}) {
   for (const m of r.meshes) if (m !== bodyMesh) m.bind(bodyMesh.skeleton, m.bindMatrix);
   r.reset();
 
+  // the person's own fixed variation: which leg carries the weight, what the free hand does, head tilt ...
+  const vr = mulberry32(((seed + 1) * 40503) >>> 0);
   const ctx = {
     rng, D: r.D, seed,
     rnd: (a, b) => a + (b - a) * rng(),
     ph: rng() * 100,
+    v: { side: vr() < 0.5 ? -1 : 1, arm: vr(), arm2: vr(), tilt: vr() * 2 - 1, yaw: vr() * 2 - 1, roll: vr() * 2 - 1, lean: vr(), t0: 3 + vr() * 90, smile: vr() },
     lookTarget: opts.lookAt ? opts.lookAt.clone() : null,
     target: opts.target ? opts.target.clone() : null,
+    focus: null,
     lookDefault(rr, amount = 1) {
       const e = rr.eyes();
-      const tgt = ctx.lookTarget ? ctx.lookTarget.clone() : V(ctx.lookYaw, e.y + ctx.lookPitch, 2);
-      rr.look(tgt, amount);
+      ctx.focus = ctx.lookTarget ? ctx.lookTarget.clone() : V(e.x + ctx.lookYaw, e.y + ctx.lookPitch, 2);
+      rr.look(ctx.focus, amount);
     },
   };
   ctx.lookYaw = (rng() - 0.5) * 0.9;
@@ -1003,6 +1101,7 @@ export function createPerson(id, opts = {}) {
   if (uniform || opts.name) buildUniform(r, uniform || null, builtin, opts.name);
 
   // pose (and its animation samples)
+  const tilt = (pose.idle && pose.idle.tilt !== undefined ? pose.idle.tilt : 1) * ctx.v.tilt * 4.5 * DEG;
   const build = (c, p) => {
     REACH = tpl.dims.child ? 0.45 : 1;
     try {
@@ -1013,11 +1112,12 @@ export function createPerson(id, opts = {}) {
         if (CASUAL_HOLD.has(poseName)) holdInFront(r, holding, !!pose.seated);
         else { r.resetFingers('R'); r.curl('R', GRIP[HOLD_GRIP[holding]]); }
       }
+      if (tilt) r.rotW('Head', r.faceDir(), tilt);          // nobody holds their head perfectly level
     } finally { REACH = 1; }
   };
   if (pose.seated && tpl.cache.seatDrop === undefined) {
-    // measure once per avatar where the buttocks meet the cushion (fixed random numbers)
-    build({ ...ctx, rng: mulberry32(1), rnd: (a, b) => (a + b) / 2 }, pose.samples[0]);
+    // measure once per avatar where the buttocks meet the cushion (fixed random numbers and variation)
+    build({ ...ctx, rng: mulberry32(1), rnd: (a, b) => (a + b) / 2, v: { ...ctx.v, arm: 0, arm2: 0, yaw: 0, roll: 0, lean: 0.5 }, lookTarget: null }, pose.samples[0]);
     calibrateSeat(r);
   }
   const snaps = [];
@@ -1032,13 +1132,14 @@ export function createPerson(id, opts = {}) {
   r.apply(snaps[0]);
   root.updateMatrixWorld(true);
 
-  // face
-  const face = new Face(r);
-  const moodName = opts.mood || POSE_MOOD[poseName] || 'smile';
-  if (!MOODS[moodName]) throw new Error(`people: unknown mood "${moodName}"`);
-  ctx.face = face; ctx.mood = moodName;
-  ctx.faceBase = { ...MOODS[moodName], ...(opts.face || {}) };
-  face.apply(ctx.faceBase, opts.gaze || null);
+  // face, gaze and motion
+  ctx.mood = moodName;
+  ctx.face = new Face(r);
+  ctx.faceExtra = opts.face || null;
+  ctx.gaze = gazeTargets(r, pose, ctx);
+  const update = makeAnimator(r, pose, snaps, ctx);
+  // every person starts from a moment of their own motion (also what static people are frozen in)
+  update(ctx.v.t0, 0, true);
   root.updateMatrixWorld(true);
 
   // props
@@ -1047,7 +1148,7 @@ export function createPerson(id, opts = {}) {
   for (const m of r.meshes) { m.castShadow = shadows; m.receiveShadow = shadows; m.frustumCulled = true; }
   group.traverse((o) => { if (o.isMesh && !o.isSkinnedMesh) { o.castShadow = shadows && !o.userData.noShadow; o.receiveShadow = shadows; } });
 
-  group.userData.person = { id, pose: poseName, uniform, holding, seated: !!pose.seated, height: tpl.dims.height * scale };
+  group.userData.person = { id, pose: poseName, mood: moodName, uniform, holding, seated: !!pose.seated, height: tpl.dims.height * scale };
 
   if (opts.static) {
     bakeStatic(group, root, r);
@@ -1055,11 +1156,60 @@ export function createPerson(id, opts = {}) {
     return group;
   }
   for (const m of r.meshes) { m.boundingSphere = null; m.computeBoundingSphere(); m.boundingSphere.radius += 0.25; }
-  group.userData.update = makeAnimator(r, pose, snaps, ctx);
+  const t0 = ctx.v.t0;
+  group.userData.update = (t = 0, dt) => update(t + t0, dt, false);
   return group;
 }
 
+// ----------------------------------------------------------------------------------- gaze
+// Where a person looks over time, as head turns (yaw, pitch in radians) relative to the base pose.
+// The first target is the pose's own focus (opts.lookAt, the bowl, the pot ...); the others are the
+// people and things one naturally glances at in that situation. w = how often, people = it is a person.
+function gazeTargets(r, pose, c) {
+  const e = r.eyes(), f = r.faceDir();
+  const yaw0 = Math.atan2(f.x, f.z), pitch0 = Math.asin(clamp(f.y, -1, 1));
+  const list = [];
+  const add = (p, w, people = false) => {
+    if (!p) return;
+    const d = p.clone().sub(e);
+    if (d.lengthSq() < 1e-6) return;
+    d.normalize();
+    let yaw = Math.atan2(d.x, d.z) - yaw0;
+    while (yaw > Math.PI) yaw -= 2 * Math.PI;
+    while (yaw < -Math.PI) yaw += 2 * Math.PI;
+    list.push({ yaw: clamp(yaw, -55 * DEG, 55 * DEG), pitch: clamp(Math.asin(clamp(d.y, -1, 1)) - pitch0, -35 * DEG, 30 * DEG), w, people });
+  };
+  const s = c.v.side, ey = e.y, kid = c.D.child ? 0.12 : 0;
+  const focus = c.focus || V(e.x, ey, 2);
+  const across = V(0, 1.16 + kid, 1.16), diag = V(s * 0.76, 1.16 + kid, 1.16), beside = V(s * 0.72, 1.14, 0.02), food = V(-s * 0.1, TABLE_Y + 0.03, 0.6);
+  switch (pose.gaze) {
+    case 'table':
+      add(focus, c.lookTarget ? 5 : 2.5, true);
+      if (!c.lookTarget || c.lookTarget.distanceTo(across) > 0.3) add(across, 2, true);
+      add(diag, 1.6, true); add(food, 1.1); add(beside, 0.7, true);
+      break;
+    case 'eat': add(focus, 4.5); add(across, 1.6, true); add(diag, 1, true); break;
+    case 'phone': add(focus, 8); add(across, 0.7, true); break;
+    case 'front':
+      add(focus, 4, true); add(V(e.x - 0.9, ey - 0.05, 2), 1, true); add(V(e.x + 0.9, ey, 2.2), 1, true); add(V(e.x + s * 0.3, ey - 0.45, 1.6), 0.5);
+      break;
+    case 'cashier': add(focus, 2.2); add(V(0.05, 1.56, 1.25), 3, true); add(V(s * 0.9, 1.5, 1.6), 0.6, true); break;
+    case 'tray': add(focus, 3.5, true); add(c.tray, 0.8); add(V(e.x + s * 1.0, ey - 0.25, 1.6), 1, true); break;
+    case 'work': add(focus, 6); add(V(e.x + s * 0.4, ey + 0.02, 1.9), 1.1, true); add(V(e.x - s * 0.25, 0.95, 0.5), 1.2); break;
+    default: add(focus, 1);
+  }
+  if (!list.length) list.push({ yaw: 0, pitch: 0, w: 1, people: false });
+  const total = list.reduce((a, t) => a + t.w, 0);
+  let acc = 0;
+  for (const t of list) { acc += t.w / total; t.cum = acc; }
+  return { list, period: (pose.gaze === 'work' || pose.gaze === 'eat' ? 3.4 : 2.7) * (0.85 + 0.4 * c.v.arm2) };
+}
+
 // ----------------------------------------------------------------------------------- animation
+const hash1 = (x) => { const s = Math.sin(x * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+// smooth value noise in [-1, 1]
+const noise1 = (x) => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return (hash1(i) * (1 - u) + hash1(i + 1) * u) * 2 - 1; };
+
 function makeAnimator(r, pose, snaps, ctx) {
   const n = snaps.length;
   const bones = r.all;
@@ -1084,9 +1234,8 @@ function makeAnimator(r, pose, snaps, ctx) {
   };
   const faceK = new THREE.Vector3().crossVectors(r.faceDir(), UP).normalize();
   const L = {
-    sp1: layer('Spine1', RIGHT_X), sp2: layer('Spine2', RIGHT_X),
-    neckY: layer('Neck', UP), headY: layer('Head', UP), headP: layer('Head', faceK), neckP: layer('Neck', faceK),
-    jaw: layer('MJaw', faceK),
+    sp1: layer('Spine1', RIGHT_X), sp2: layer('Spine2', RIGHT_X), sp1R: layer('Spine1', FWD), sp2R: layer('Spine2', FWD), sp2Y: layer('Spine2', UP),
+    neckY: layer('Neck', UP), headY: layer('Head', UP), headP: layer('Head', faceK), neckP: layer('Neck', faceK), headR: layer('Head', r.faceDir()),
     clL: layer('L Clavicle', FWD), clR: layer('R Clavicle', FWD),
     thumb: layer('R Finger01', faceK),
   };
@@ -1094,13 +1243,31 @@ function makeAnimator(r, pose, snaps, ctx) {
   const touched = [...new Set([...moving, ...Object.values(L).filter(Boolean).map((l) => l.i), ...clav])];
   const curQ = new Float32Array(bones.length * 4), curP = new Float32Array(bones.length * 3);
   const idle = pose.idle || {};
-  const ph = ctx.ph;
+  const ph = ctx.ph, mood = ctx.mood, face = ctx.face, gz = ctx.gaze, G = gz.list;
+  const gain = r.tpl.entry.expr || 1;
+  const base = snaps[0];
+  const moodBase = MOODS[mood];
+  const W = {};
+  const eye = { yaw: 0, pitch: 0 };
   const tmpQ = new THREE.Quaternion(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), neckQ = new THREE.Quaternion();
   const va = new THREE.Vector3(), vb = new THREE.Vector3();
   const rate = 0.85 + (ph % 1) * 0.3;
-  const base = snaps[0];
-  let last = -1;
-  return function update(t = 0) {
+  const sway = idle.sway === undefined ? 0.5 : idle.sway;
+  const smileBias = 0.85 + 0.3 * ctx.v.smile;                       // some people simply smile more
+  const pickTarget = (slot) => { const h = hash1(slot * 1.37 + ph); for (const g of G) if (h <= g.cum) return g; return G[G.length - 1]; };
+  const blinkP = 3.1 + (ph % 1.7);                                   // average seconds between blinks
+  const blinkAt = (t) => {                                           // 0..1 lid closure
+    let b = 0;
+    const k0 = Math.floor(t / blinkP);
+    for (let k = k0 - 1; k <= k0 + 1; k++) {
+      const tb = (k + 0.5 + (hash1(k * 3.1 + ph) - 0.5) * 0.9) * blinkP, x = t - tb;
+      if (x > 0 && x < 0.2) b = Math.max(b, x < 0.06 ? x / 0.06 : x < 0.09 ? 1 : 1 - (x - 0.09) / 0.11);
+    }
+    return b;
+  };
+  const laughP = 6.2 + (ph % 2.6);
+  let last = NaN;
+  return function update(t = 0, dt = 0, still = false) {
     if (t === last) return;
     last = t;
     // 1) base pose, or interpolation between the precomputed samples
@@ -1119,39 +1286,92 @@ function makeAnimator(r, pose, snaps, ctx) {
     }
     for (const i of touched) { bones[i].quaternion.fromArray(curQ, i * 4); bones[i].position.fromArray(curP, i * 3); }
     const add = (l, a) => { if (l && a) l.b.quaternion.multiply(tmpQ.setFromAxisAngle(l.axis, a)); };
-    // 2) head motion (neck part is compensated on the clavicles so the arms stay put)
     neckQ.identity();
     const neck = (l, a) => { if (l && a) { tmpQ.setFromAxisAngle(l.axis, a); l.b.quaternion.multiply(tmpQ); neckQ.multiply(tmpQ); } };
+
+    // 2) who they are looking at: the eyes jump first, the head follows
+    const tg = (t + ph * 3) / gz.period, slot = Math.floor(tg), u = (tg - slot) * gz.period;
+    const cur = pickTarget(slot), prev = pickTarget(slot - 1);
+    const kh = smooth(u / 0.6), ke = smooth(u / 0.16);
+    const wantYaw = prev.yaw + (cur.yaw - prev.yaw) * ke, wantPitch = prev.pitch + (cur.pitch - prev.pitch) * ke;
+    let headYaw = (prev.yaw + (cur.yaw - prev.yaw) * kh) * 0.8, headPitch = (prev.pitch + (cur.pitch - prev.pitch) * kh) * 0.65;
+    const atPeople = prev.people ? (cur.people ? 1 : 1 - kh) : (cur.people ? kh : 0);
+    // small natural head motion on top
     const lk = idle.look || 0;
-    if (lk) {
-      const yaw = (Math.sin(t * 0.23 + ph) * 0.6 + Math.sin(t * 0.61 + ph * 1.7) * 0.4) * 0.16 * lk;
-      const pit = (Math.sin(t * 0.31 + ph * 0.7) * 0.5 + Math.sin(t * 0.83 + ph) * 0.5) * 0.05 * lk;
-      neck(L.neckY, yaw * 0.4); add(L.headY, yaw * 0.6);
-      neck(L.neckP, pit * 0.4); add(L.headP, pit * 0.6);
-    }
-    if (idle.glanceUp) {
-      const g = smooth((Math.sin(t * 0.35 + ph) - 0.55) * 4);
-      neck(L.neckP, g * 0.14); add(L.headP, g * 0.2);
-    }
-    if (idle.talk) {
-      const on = Math.sin(t * 0.5 + ph) > -0.3 ? 1 : 0;
-      const j = on * Math.max(0, Math.sin(t * 11 + ph) * 0.6 + Math.sin(t * 17 + ph * 2) * 0.4);
-      add(L.jaw, j * 0.07);
-      add(L.headP, on * Math.sin(t * 2.3 + ph) * 0.025);
+    headYaw += noise1(t * 0.21 + ph) * 0.07 * lk;
+    headPitch += noise1(t * 0.27 + ph * 1.7) * 0.035 * lk;
+    let headRoll = noise1(t * 0.17 + ph * 2.3) * 0.03 * lk;
+
+    // 3) mood: what the face and the upper body are doing
+    for (const k in W) W[k] = 0;
+    for (const k in moodBase) W[k] = moodBase[k];
+    let sm = (W.smile || 0) * gain * smileBias * (0.9 + 0.12 * noise1(t * 0.13 + ph));
+    let spinePitch = 0, shrug = 0;
+    if (mood === 'talk') {
+      const speak = smooth((Math.sin(t * 0.45 + ph) + 0.3) * 3);     // speaking / listening turns
+      const syl = Math.max(0, Math.sin(t * 13.1 + ph) * 0.6 + Math.sin(t * 19.7 + ph * 2) * 0.4);
+      const open = speak * (0.2 + 0.8 * syl) * (0.65 + 0.35 * noise1(t * 1.7 + ph));
+      const shape = noise1(t * 2.3 + ph * 5);
+      W.jaw = 0.5 * open; W.lipsOpen = 0.55 * open;
+      W.oo = speak * Math.max(0, shape) * 0.5; W.ee = speak * Math.max(0, -shape) * 0.4;
+      W.browUp = speak * Math.max(0, noise1(t * 0.8 + ph * 3)) * 0.45;
+      sm = sm * (1 - 0.3 * speak) + (1 - speak) * 0.55 * gain * smileBias;   // listening: an attentive smile
+      headPitch += speak * Math.sin(t * 2.3 + ph) * 0.03 + (1 - speak) * Math.max(0, Math.sin(t * 1.1 + ph)) ** 6 * 0.07;   // emphasis / nods
+      headRoll += speak * noise1(t * 0.6 + ph) * 0.03;
+    } else if (mood === 'laugh') {
+      const x = (t + ph * 7) % laughP;
+      const b = x < 0.3 ? smooth(x / 0.3) : x < 1.5 ? 1 : x < 2.2 ? 1 - smooth((x - 1.5) / 0.7) : 0;      // a laugh
+      const ha = b * Math.abs(Math.sin(t * 17));
+      W.grin = (W.grin || 0) * (0.45 + 0.9 * b);
+      W.jaw = b * (0.3 + 0.25 * ha);
+      W.squint = (W.squint || 0) + 0.55 * b;
+      W.browUp = 0.25 * b;
+      sm *= 1 + 0.12 * b;
+      headPitch += b * 0.1;                                          // head goes back
+      spinePitch -= b * 0.035 + ha * 0.012;
+      shrug = b * (0.035 + 0.04 * ha);                               // shoulders bounce
+    } else if (mood === 'focus') {
+      sm += atPeople * 0.5 * gain;                                   // a smile when they glance up at the guests
+      W.lidDown = (W.lidDown || 0) * (1 - atPeople);
+      W.browIn = (W.browIn || 0) * (1 - 0.7 * atPeople);
+    } else if (mood === 'smile') {
+      const big = smooth((noise1(t * 0.11 + ph * 4) - 0.25) * 3) * atPeople;   // now and then a wider, open smile
+      W.grin = 0.42 * big; sm *= 1 + 0.15 * big;
+      W.browUp = 0.2 * big;
     }
     if (idle.chew) {
       const T = 6 + (ph % 3), x = (t * rate + ph * 5) % T;
-      if (x > 1.9 && x < 4.5) add(L.jaw, Math.max(0, Math.sin((x - 1.9) * 9)) * 0.05);
+      if (x > 1.9 && x < 4.6) { const c = Math.max(0, Math.sin((x - 1.9) * 9)); W.jaw = (W.jaw || 0) + c * 0.22; W.press = 0.5; sm *= 0.6; }
+      else if (x <= 1.2 && x > 0.55) { W.jaw = (W.jaw || 0) + 0.75; W.lipsOpen = 0.5; sm *= 0.4; }   // mouth opens for the bite
     }
+    W.smile = sm;
+    if (ctx.faceExtra) for (const k in ctx.faceExtra) W[k] = (W[k] || 0) + ctx.faceExtra[k];
+
+    // 4) apply head, posture and breathing
+    neck(L.neckY, headYaw * 0.4); add(L.headY, headYaw * 0.6);
+    neck(L.neckP, headPitch * 0.4); add(L.headP, headPitch * 0.6);
+    add(L.headR, headRoll);
     if (neckQ.w < 0.999999) {
       neckQ.invert();
       for (const i of clav) { const b = bones[i]; b.quaternion.premultiply(neckQ); b.position.applyQuaternion(neckQ); }
     }
-    // 3) breathing (chest + a hint of shoulder lift)
     const br = (idle.breathe || 0) * Math.sin(t * 1.55 + ph);
-    add(L.sp1, br * 0.006); add(L.sp2, -br * 0.01);
-    add(L.clL, br * 0.008); add(L.clR, -br * 0.008);
+    add(L.sp1, br * 0.007 + spinePitch * 0.4); add(L.sp2, -br * 0.014 + spinePitch * 0.6);
+    add(L.sp1R, sway * 0.016 * noise1(t * 0.19 + ph * 1.3)); add(L.sp2R, sway * 0.014 * noise1(t * 0.19 + ph * 1.3 + 0.4));
+    add(L.sp2Y, sway * 0.03 * noise1(t * 0.15 + ph * 0.7) + headYaw * 0.08);
+    add(L.clL, br * 0.012 + shrug); add(L.clR, -br * 0.012 - shrug);
     if (idle.thumb) add(L.thumb, Math.max(0, Math.sin(t * 6 + ph)) * Math.max(0, Math.sin(t * 0.9 + ph)) * 0.25);
+
+    // 5) eyes: hold the target while the head moves, with small saccades; lids follow the gaze; blinks
+    if (face.ok) {
+      const sacc = Math.floor(t * 1.3 + ph);
+      eye.yaw = clamp(wantYaw - headYaw + (hash1(sacc + ph) - 0.5) * 0.06, -0.4, 0.4);
+      eye.pitch = clamp(wantPitch - headPitch + (hash1(sacc * 1.7 + ph) - 0.5) * 0.035, -0.42, 0.3);
+      W.lidDown = (W.lidDown || 0) + 0.16 + clamp(-eye.pitch * 1.5, -0.1, 0.55);
+      const shift = cur !== prev && hash1(slot * 2.3 + ph) < 0.6 && u < 0.2 ? Math.sin(u / 0.2 * Math.PI) : 0;   // blink with a gaze change
+      W.blink = still ? 0 : Math.max(blinkAt(t), shift);
+      face.apply(W, eye);
+    }
   };
 }
 
@@ -2102,10 +2322,10 @@ const FACE_PAIRED = new Set(['Eye', 'MouthBottom', 'Masseter', 'Caninus', 'EyeBl
 // Base expression per mood (action-unit weights). Animated people move around these; static ones bake them.
 const MOODS = {
   neutral: {},
-  smile: { smile: 0.62, browSoft: 0.35, squint: 0.15 },
-  laugh: { smile: 0.8, grin: 0.55, browSoft: 0.4, squint: 0.3 },
-  talk: { smile: 0.4, browSoft: 0.3 },
-  focus: { smile: 0.22, browIn: 0.3, lidDown: 0.35, press: 0.25 },
+  smile: { smile: 1.1, browSoft: 0.4, squint: 0.2 },
+  laugh: { smile: 1.2, grin: 0.6, browSoft: 0.4, squint: 0.3 },
+  talk: { smile: 0.7, browSoft: 0.3, squint: 0.1 },
+  focus: { smile: 0.4, browIn: 0.3, lidDown: 0.3, press: 0.2 },
 };
 const POSE_MOOD = {
   stand: 'smile', 'stand-talk': 'talk', wave: 'smile', sit: 'smile', 'sit-eat': 'smile', 'sit-talk': 'talk', 'sit-cheers': 'laugh',
@@ -2194,7 +2414,7 @@ class Face {
 //     roughness, so shadowed cheeks/hands stay warm instead of grey;
 //   - eyeballs (per-vertex mask "pEye") get a wet, glossy surface that picks up catchlights, and a
 //     little extra fill so the whites never go dark under the brow.
-const SKIN = { wrap: 0.42, scatter: 0.3, ambient: 0.22, rough: 0.56, eyeRough: 0.07, eyeFill: 0.45 };
+const SKIN = { wrap: 0.3, scatter: 0.3, ambient: 0.1, rough: 0.56, eyeRough: 0.07, eyeFill: 0.25 };
 
 function sampleSkinTone(tpl) {
   const head = tpl.meshes.find((m) => m.userData.part === 'head') || tpl.meshes[0];
@@ -2244,7 +2464,7 @@ function patchSkinMaterial(mat, tone) {
 		float plr = pl / pr;
 		gSkin = ( 1.0 - smoothstep( 0.16, 0.40, pd ) ) * smoothstep( 0.22, 0.5, plr ) * ( 1.0 - smoothstep( 2.4, 3.6, plr ) ) * ( 1.0 - vPEye );
 		// eyes: lift the whites and irises a little
-		diffuseColor.rgb = mix( diffuseColor.rgb, min( vec3( 1.0 ), pow( diffuseColor.rgb, vec3( 0.86 ) ) * 1.12 ), vPEye );
+		diffuseColor.rgb = mix( diffuseColor.rgb, min( vec3( 1.0 ), pow( diffuseColor.rgb, vec3( 0.93 ) ) * 1.05 ), vPEye );
 	}`);
     f = f.replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 	roughnessFactor = mix( roughnessFactor, ${SKIN.rough.toFixed(3)}, gSkin );

@@ -143,7 +143,15 @@ dof.uniforms.tDepth.value = ao.depthTexture;   // (set after construction: Shade
 dof.enabled = false;
 composer.addPass(dof);
 
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.34, 0.4, 1.05);
+// Bloom only for things that really glow (bulbs, neon, embers, flames). The threshold is above what a lit
+// surface reaches, with a soft knee, and the bloom input is capped so a specular hot spot on steel or glass
+// can never blow up into a white blob (the "glare" bug).
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.36, 0.42, 1.55);
+bloom.highPassUniforms.smoothWidth.value = 0.6;
+bloom.materialHighPassFilter.fragmentShader = bloom.materialHighPassFilter.fragmentShader.replace(
+  'vec4 texel = texture2D( tDiffuse, vUv );',
+  'vec4 texel = texture2D( tDiffuse, vUv ); texel.rgb *= min( 1.0, 3.0 / max( dot( texel.rgb, vec3( 0.299, 0.587, 0.114 ) ), 1e-4 ) );');
+bloom.materialHighPassFilter.needsUpdate = true;
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 const smaa = new SMAAPass(window.innerWidth, window.innerHeight);   // sharper edges than FXAA, text stays crisp

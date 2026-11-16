@@ -67,6 +67,18 @@ function pbr(set, { color = '#ffffff', rough = 1, metal = 0, metalMap = false, n
   return physical ? new THREE.MeshPhysicalMaterial({ ...params, ...physical }) : new THREE.MeshStandardMaterial(params);
 }
 
+// A lit glass bulb: hot filament core facing the camera, softer amber towards the rim. Up close it reads as a
+// real bulb instead of a flat white disc, and the bloom halo stays small.
+function glassBulb(m) {
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      float facing = clamp( dot( normalize( normal ), normalize( vViewPosition ) ), 0.0, 1.0 );
+      totalEmissiveRadiance *= mix( 0.22, 1.2, pow( facing, 3.0 ) );`);
+  };
+  m.customProgramCacheKey = () => 'glassBulb';
+  return m;
+}
+
 /**
  * Build every shared material. ASYNC: textures stream in through the shared LoadingManager
  * (subscribe with onAssetProgress from assets.js for the loading bar).
@@ -160,7 +172,7 @@ export async function buildMaterials(renderer) {
     fabricDark: std({ color: '#1b1714', roughness: 1 }),
 
     // ---- light-emitting (unchanged)
-    bulb: std({ color: '#ffd9a0', emissive: '#ffb25e', emissiveIntensity: 4.5, roughness: 0.3 }),
+    bulb: glassBulb(std({ color: '#ffd9a0', emissive: '#ffb25e', emissiveIntensity: 4.2, roughness: 0.3 })),
     bulbSoft: std({ color: '#ffe2b8', emissive: '#ffc078', emissiveIntensity: 3.2, roughness: 0.4 }),
     ember: (() => { const t = T.emberTexture(); return std({ map: t, emissive: '#ffffff', emissiveMap: t, emissiveIntensity: 2.2, roughness: 0.9 }); })(),
     coolPanel: std({ color: '#ffffff', emissive: '#e8f2ff', emissiveIntensity: 3.0 }),

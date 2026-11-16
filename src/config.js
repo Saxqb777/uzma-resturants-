@@ -175,7 +175,7 @@ export const SCENES = [
     id: 'plan', zone: 'top', kicker: 'Overview', glide: true,
     title: 'The Floor Plan',
     text: 'Roof off: the street, entrance, cashier, 30 booths, the live cooking station and the main kitchen.',
-    cam: [-3.2, 27, -11.2], look: [0.2, 0, -11.2], up: [-1, 0, 0], fov: 45, cutaway: true,
+    cam: [-1.7, 31.5, -11.6], look: [1.7, 0, -11.6], up: [-1, 0, 0], fov: 45, cutaway: true,
     drift: [0, 0.8, -0.6],
     labels: [
       { text: 'Street', at: [0, -0.4, 3.0] },
@@ -186,8 +186,8 @@ export const SCENES = [
       { text: 'Centre booths', at: [-2.5, 1.4, -10.75] },
       { text: 'Centre booths ', at: [2.5, 1.4, -10.75] },
       { text: 'Wall booths ', at: [6.8, 1.0, -10.75] },
-      { text: 'Live cooking station', at: [0, 1.2, -18.8] },
-      { text: 'Main kitchen', at: [0, 1.0, -24.5] },
+      { text: 'Live cooking station', at: [1.3, 1.2, -18.4] },
+      { text: 'Main kitchen', at: [-1.3, 1.0, -24.9] },
     ],
   },
 ];
