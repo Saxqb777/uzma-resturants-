@@ -91,11 +91,23 @@ export async function buildCrowd(ctx, story) {
   place(A.assistant1, K.assistant1.x, K.assistant1.z, K.assistant1.ry, { pose: K.assistant1.pose, uniform: 'cook', name: STAFF.assistant1 });
   place(A.assistant2, K.assistant2.x, K.assistant2.z, K.assistant2.ry, { pose: K.assistant2.pose, uniform: 'cook', name: STAFF.assistant2 });
   place(A.waiter, K.waiter.x, K.waiter.z, K.waiter.ry, { pose: K.waiter.pose, uniform: 'server', name: STAFF.server1 });
-  place(A.kitchen1, K.kitchen1.x, K.kitchen1.z, K.kitchen1.ry, { pose: K.kitchen1.pose, uniform: 'cook', name: STAFF.kitchen1 });
+  place(A.kitchen1, K.kitchen1.x, K.kitchen1.z, K.kitchen1.ry, { pose: K.kitchen1.pose, holding: K.kitchen1.holding, uniform: 'cook', name: STAFF.kitchen1 });
   place(A.kitchen2, K.kitchen2.x, K.kitchen2.z, K.kitchen2.ry, { pose: K.kitchen2.pose, uniform: 'cook', name: STAFF.kitchen2 });
   place(A.kitchen3, K.kitchen3.x, K.kitchen3.z, K.kitchen3.ry, { pose: K.kitchen3.pose, uniform: 'cook', name: STAFF.kitchen3 }, false);
   // a server bringing a tray down the centre aisle
   place(A.serverAisle, 0.25, -12.4, 0.12, { pose: 'carry-tray', uniform: 'server', name: STAFF.server2 });
+
+  // three friends at the photo spot (mural wall by the entrance): one on the bench, one waving at the
+  // camera, the third taking their picture with an instant camera (the photo-spot slide)
+  {
+    const cam = new THREE.Vector3(-4.75, 1.5, -3.3);               // the friend's camera, world space
+    const look = (x, z, ry) => toLocal(x, z, ry, cam.x, cam.y, cam.z);
+    const benchFront = -7.03 + 0.21;                                 // bench by the mural wall, seat front edge
+    place('woman-pink-blazer', benchFront, -2.15, Math.PI / 2, { pose: 'sit', mood: 'smile', lookAt: look(benchFront, -2.15, Math.PI / 2) });
+    place('man-emirati-kandura', -6.55, -2.85, Math.PI / 2 - 0.25, { pose: 'wave', mood: 'smile', lookAt: look(-6.55, -2.85, Math.PI / 2 - 0.25) });
+    const ry = Math.atan2(-6.7 - cam.x, -2.5 - cam.z);                // facing her friends
+    place('woman-brown-jacket', cam.x, cam.z, ry, { pose: 'photo', mood: 'smile' });
+  }
 
   // the photographer: one person, two moments of the story
   const photoTable = BOOTHS.find((b) => b.id === PHOTO_TABLE);

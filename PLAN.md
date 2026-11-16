@@ -45,24 +45,34 @@ This file is the project's memory. Any new chat should read it first.
 - **Higgsfield budget:** account had 69 credits.
   - Images 0.25 cr each.
   - 3D models 9 cr each (Tripo), saved for hero food only.
-- **Slides (12):**
+- **Slides (13):**
   1. Street
-  2. Offer-board zoom
+  2. Offer-board zoom (whole poster readable)
   3. Entrance (title only)
   4. Inside
-  5. Booths
-  6. Grill table (meal deal + polaroid)
-  7. Cashier
-  8. Polaroid taken (flash)
-  9. Polaroid pinned (the print is a real render of that table)
-  10. Live cooking station
-  11. Main kitchen
-  12. Floor plan
+  5. Photo spot (3 friends posing / taking a picture at the mural)
+  6. Booths
+  7. Grill table (meal deal + polaroid)
+  8. Cashier
+  9. Polaroid taken (flash)
+  10. Polaroid pinned (the print is a real render of that table)
+  11. Live cooking station
+  12. Main kitchen (with the dish station)
+  13. Floor plan
 - **Nov 15 follow-up feedback:**
   - Two cashiers.
   - Shop-name sign more vibrant (brand fonts: Lilita One + Lalezar, neon/channel-letter look).
   - People must look alive: expressions, blinking, eye contact, warm skin.
   - Better graphics: ambient occlusion, SMAA, real HDR lighting.
+- **Nov 16 feedback (done):**
+  - Cashier corner: no pink/teal decorations. Plain, in the shop's own look: dark wood, cream paper, sign red, brass.
+    - Lanterns, bunting, scalloped trim, rainbow rug, plush toys and candy jar removed.
+    - "PAY HERE · 계산대 · الدفع هنا" wooden sign board instead.
+    - Menus restyled the same way (easel, counter, table tents).
+    - Front-of-house aprons (cashiers + servers): one plain deep green.
+  - Main kitchen: proper dish station (two-bowl sink with pre-rinse spray, hood dishwasher, plate racks, sign), with a cook washing up.
+  - Offer slide zoomed out so the whole poster reads.
+  - New photo-spot slide (#5).
 - **Still waiting on her:** real menu items + prices (placeholders in `src/config.js` → `MENU`).
 - **Staff names:** Korean name tags, editable in `config.js` → `STAFF`.
 
@@ -153,3 +163,4 @@ Useful links:
   - Smoother: lighter models, smarter Auto quality.
 - **2026-11-16:** v1 deployed to Vercel (production) on the user's go.
 - **2026-11-16:** loading fix: no more "Page unresponsive" (sliced, non-blocking preparation), lighter start on iPad/phones/integrated graphics. Deployed.
+- **2026-11-16:** her feedback round: plain cashier, dish station, offer slide zoom-out, photo-spot slide (13 slides). Deployed.

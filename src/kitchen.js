@@ -21,7 +21,7 @@ export const KITCHEN_SPOTS = {
   assistant1: { x: 2.6, z: -19.4, ry: 0, pose: 'prep-chop' },     // cutting board
   waiter: { x: 1.3, z: -17.72, ry: Math.PI, pose: 'carry-tray' }, // collecting a tray on the dining side
   // main kitchen: prep islands (their back edge is z = -24.08), staff face the pass
-  kitchen1: { x: -1.4, z: -24.32, ry: 0, pose: 'prep-chop' },     // vegetables (green board)
+  kitchen1: { x: -3.95, z: -26.01, ry: Math.PI, pose: 'prep-chop', holding: null },   // at the dish station, scrubbing in the sink
   kitchen2: { x: 1.6, z: -24.32, ry: 0, pose: 'prep-chop' },      // chicken (red board)
   kitchen3: { x: -1.05, z: -21.76, ry: 0, pose: 'cashier' },      // plating at the pass, hands on the shelf
 };
@@ -226,17 +226,19 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   box(g, steel, 0.8, 0.9, 1.4, L.x0 + 0.42, 0, z0 - 4.4);
   shelving(g, M, L.x0 + 0.25, z1 + 0.9, Math.PI / 2, [['RICE', '쌀'], ['FLOUR', '밀가루'], ['GOCHUGARU', '고춧가루'], ['SESAME', '참깨']]);
 
-  // back wall: sinks + hand-wash station, dishwasher, microwaves & rice cookers on shelves
-  box(g, steel, 9.0, 0.9, 0.7, -0.2, 0, z1 + 0.38);
-  box(g, M.steel, 9.0, 0.04, 0.72, -0.2, 0.9, z1 + 0.38, { cast: false });
-  cabinetFront(g, M, -4.7, 4.3, z1 + 0.735, 0.9);
+  // back wall: dish station (double sink + dishwasher) on the left, then the counter run with the
+  // hand-wash basin, microwaves & rice cookers on the shelves above
+  dishStation(g, M, z1, rnd);
+  box(g, steel, 6.85, 0.9, 0.7, 0.875, 0, z1 + 0.38);
+  box(g, M.steel, 6.85, 0.04, 0.72, 0.875, 0.9, z1 + 0.38, { cast: false });
+  cabinetFront(g, M, -2.55, 4.3, z1 + 0.735, 0.9);
   // colour-coded chopping boards in a wall rack (food safety), a utensil rail and a knife strip
   const boardCols = ['#c9343a', '#3f9e52', '#2f6fb5', '#e8c33a', '#f4f4f0'];
   boardCols.forEach((c, i) => rb(g, std(c, { roughness: 0.6 }), 0.03, 0.34, 0.26, 3.75 + i * 0.07, 1.02, z1 + 0.2, 0.008));
   box(g, M.steel, 0.5, 0.03, 0.3, 3.9, 0.95, z1 + 0.2, { cast: false });
-  box(g, M.steel, 1.8, 0.02, 0.02, -3.2, 1.45, z1 + 0.04, { cast: false });
+  box(g, M.steel, 1.6, 0.02, 0.02, 2.65, 1.45, z1 + 0.04, { cast: false });
   for (let i = 0; i < 7; i++) {
-    const x = -4.0 + i * 0.26;
+    const x = 1.95 + i * 0.235;
     box(g, M.steel, 0.012, 0.3, 0.012, x, 1.14, z1 + 0.05, { cast: false });
     const head = new THREE.Mesh(i % 2 ? new THREE.SphereGeometry(0.045, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2) : new THREE.BoxGeometry(0.07, 0.09, 0.008), M.steel);
     head.position.set(x, 1.12, z1 + 0.05); g.add(head);
@@ -247,14 +249,11 @@ function mainKitchen(g, roof, M, W, food, rnd) {
   for (const [x, r] of [[-3.9, 0.17], [-3.4, 0.14], [3.7, 0.16]]) {
     const pot = new THREE.Mesh(new THREE.CylinderGeometry(r, r, r * 1.3, 20), M.steelBrushed); pot.position.set(x, 2.28 + r * 0.65, z1 + 0.22); g.add(pot);
   }
-  for (const x of [-3.6, -2.9]) box(g, std('#c7cacc', { metalness: 0.9, roughness: 0.25 }), 0.6, 0.02, 0.45, x, 0.91, z1 + 0.38, { cast: false });
-  faucet(g, M, -3.25, z1 + 0.15);
-  box(g, white, 0.45, 0.32, 0.35, -1.9, 0.94, z1 + 0.25);                                  // hand-wash basin
-  faucet(g, M, -1.9, z1 + 0.12);
-  label(g, [{ text: 'WASH YOUR HANDS', font: F.round, size: 60, color: '#ffffff', y: 0.38, weight: 600 }, { text: '손 씻기 · اغسل يديك', font: `${F.cute}, ${F.arabic}`, size: 44, color: '#e8fbf8', y: 0.74 }], 0.6, 0.24, -1.9, 1.75, z1 + 0.012, 0, { bg: '#2f8f8a', border: '#ffffff' });
-  box(g, white, 0.25, 0.32, 0.12, -1.35, 1.4, z1 + 0.07);                                    // paper towels
-  box(g, std('#d7f0ed', { roughness: 0.4 }), 0.1, 0.2, 0.08, -2.35, 1.4, z1 + 0.05);           // soap
-  box(g, steel, 0.65, 0.85, 0.62, -0.6, 0, z1 + 0.38);                                       // dishwasher front
+  box(g, white, 0.45, 0.32, 0.35, -1.2, 0.94, z1 + 0.25);                                  // hand-wash basin
+  faucet(g, M, -1.2, z1 + 0.12);
+  label(g, [{ text: 'WASH YOUR HANDS', font: F.round, size: 60, color: '#ffffff', y: 0.38, weight: 600 }, { text: '손 씻기 · اغسل يديك', font: `${F.cute}, ${F.arabic}`, size: 44, color: '#e8fbf8', y: 0.74 }], 0.6, 0.24, -1.2, 1.6, z1 + 0.012, 0, { bg: '#2f8f8a', border: '#ffffff' });
+  box(g, white, 0.25, 0.32, 0.12, -0.62, 1.3, z1 + 0.07);                                    // paper towels
+  box(g, std('#d7f0ed', { roughness: 0.4 }), 0.1, 0.2, 0.08, -1.62, 1.3, z1 + 0.05);           // soap
   box(g, M.steel, 9.0, 0.03, 0.4, -0.2, 1.75, z1 + 0.22, { cast: false });
   box(g, M.steel, 9.0, 0.03, 0.4, -0.2, 2.25, z1 + 0.22, { cast: false });
   for (const x of [0.6, 1.4]) microwave(g, x, 1.78, z1 + 0.25);
@@ -300,6 +299,93 @@ function mainKitchen(g, roof, M, W, food, rnd) {
 }
 
 // door seams and handles on the front of a steel counter running along X (front face at z)
+// Dish station on the back wall, left end (x -4.7 … -1.75): a commercial two-bowl sink on legs with a
+// pull-down pre-rinse spray, a hood-type dishwasher, and a landing table with racks of clean plates.
+function dishStation(g, M, z1, rnd) {
+  const steel = M.steelBrushed, shiny = M.steel;
+  const dark = std('#2a2e31', { roughness: 0.5 });
+  const zb = z1 + 0.02, zf = z1 + 0.74, zc = (zb + zf) / 2, d = zf - zb;
+  const deck = 0.93;
+  // ---- sink unit: x -4.7 … -3.25
+  const sx0 = -4.7, sx1 = -3.25, scx = (sx0 + sx1) / 2;
+  for (const [x, z] of [[sx0 + 0.05, zb + 0.06], [sx1 - 0.05, zb + 0.06], [sx0 + 0.05, zf - 0.06], [sx1 - 0.05, zf - 0.06]]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.024, 0.62, 10), shiny); leg.position.set(x, 0.31, z); g.add(leg);
+  }
+  box(g, steel, sx1 - sx0 - 0.04, 0.025, d - 0.06, scx, 0.18, zc);                          // undershelf
+  box(g, steel, sx1 - sx0, 0.3, 0.025, scx, 0.62, zf - 0.012);                               // apron front
+  // two deep bowls, open at the top (bottom + four walls), set into the deck
+  const bw = 0.56, bd = 0.46, by0 = 0.64, bz = zc + 0.03;
+  const bowlIn = std('#a9afb4', { metalness: 0.85, roughness: 0.42 });
+  for (const bx of [scx - 0.33, scx + 0.33]) {
+    box(g, bowlIn, bw, 0.012, bd, bx, by0, bz, { cast: false });
+    box(g, bowlIn, 0.012, deck - by0, bd, bx - bw / 2, by0, bz, { cast: false });
+    box(g, bowlIn, 0.012, deck - by0, bd, bx + bw / 2, by0, bz, { cast: false });
+    box(g, bowlIn, bw, deck - by0, 0.012, bx, by0, bz - bd / 2, { cast: false });
+    box(g, bowlIn, bw, deck - by0, 0.012, bx, by0, bz + bd / 2, { cast: false });
+    const drain = new THREE.Mesh(new THREE.CircleGeometry(0.035, 16), dark); drain.rotation.x = -Math.PI / 2; drain.position.set(bx, by0 + 0.014, bz); g.add(drain);
+  }
+  // deck around the bowls (front lip, back ledge, ends, middle divider) + backsplash
+  box(g, shiny, sx1 - sx0, 0.03, zf - (bz + bd / 2), scx, deck - 0.03, (zf + bz + bd / 2) / 2, { cast: false });
+  box(g, shiny, sx1 - sx0, 0.03, (bz - bd / 2) - zb, scx, deck - 0.03, (zb + bz - bd / 2) / 2, { cast: false });
+  for (const x of [sx0 + 0.03, scx, sx1 - 0.03]) box(g, shiny, x === scx ? 0.1 : 0.06, 0.03, bd, x, deck - 0.03, bz, { cast: false });
+  box(g, shiny, sx1 - sx0, 0.06, 0.04, scx, deck, zf - 0.02, { cast: false });               // rolled front edge
+  box(g, steel, sx1 - sx0, 0.26, 0.025, scx, deck, zb + 0.012);                              // backsplash
+  // a gooseneck tap for the left bowl, and the pre-rinse spray (riser, arm, spring, spray head) for the right one
+  const tapX = scx - 0.33, sprX = scx + 0.33;
+  box(g, shiny, 0.03, 0.22, 0.03, tapX, deck, zb + 0.08, { cast: false });
+  const neck = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.013, 8, 18, Math.PI), shiny); neck.position.set(tapX, deck + 0.22, zb + 0.19); neck.rotation.y = Math.PI / 2; g.add(neck);
+  const riser = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.66, 10), shiny); riser.position.set(sprX - 0.12, deck + 0.33, zb + 0.07); g.add(riser);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.22, 10), shiny); arm.rotation.z = Math.PI / 2; arm.position.set(sprX - 0.01, deck + 0.64, zb + 0.07); g.add(arm);
+  const coil = [];
+  for (let i = 0; i <= 120; i++) { const t = i / 120, a = t * Math.PI * 2 * 14; coil.push(new THREE.Vector3(sprX + 0.1 + Math.cos(a) * 0.022, deck + 0.62 - t * 0.34, zb + 0.07 + Math.sin(a) * 0.022)); }
+  const spring = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coil), 240, 0.0035, 5, false), shiny); g.add(spring);
+  const hose = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.34, 8), dark); hose.position.set(sprX + 0.1, deck + 0.45, zb + 0.07); g.add(hose);
+  const head = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.022, 0.1, 14), shiny); head.position.set(sprX + 0.1, deck + 0.24, zb + 0.07); g.add(head);
+  box(g, std('#1f6fb5', { roughness: 0.5 }), 0.012, 0.035, 0.02, sprX + 0.1 + 0.03, deck + 0.26, zb + 0.07, { cast: false });   // blue squeeze handle
+  // a few plates and a bowl soaking in the left bowl, a stack of dirty bowls on the deck
+  const plateGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.014, 24);
+  const plateMat = std('#f3f1ec', { roughness: 0.3 });
+  for (let i = 0; i < 4; i++) { const pl = new THREE.Mesh(plateGeo, plateMat); pl.position.set(tapX - 0.12 + i * 0.07, by0 + 0.12, bz); pl.rotation.set(0.15, 0, Math.PI / 2 - 0.3); g.add(pl); }
+  const bowlGeo = new THREE.CylinderGeometry(0.075, 0.05, 0.06, 18, 1, true);
+  for (let i = 0; i < 3; i++) { const b = new THREE.Mesh(bowlGeo, std('#ece8e0', { roughness: 0.3, side: THREE.DoubleSide })); b.position.set(sx0 + 0.12, deck + 0.03 + i * 0.03, zb + 0.16); g.add(b); }
+
+  // ---- hood-type dishwasher: x -3.25 … -2.55
+  const dx = -2.9, dw = 0.7;
+  for (const [x, z] of [[dx - 0.3, zb + 0.08], [dx + 0.3, zb + 0.08], [dx - 0.3, zf - 0.08], [dx + 0.3, zf - 0.08]]) box(g, shiny, 0.04, 0.08, 0.04, x, 0, z, { cast: false });
+  box(g, steel, dw, 0.82, d, dx, 0.08, zc);                                                   // wash tank
+  box(g, shiny, dw - 0.04, 0.6, 0.012, dx, 0.12, zf + 0.004, { cast: false });                // front panel
+  box(g, dark, dw - 0.1, 0.11, 0.014, dx, 0.74, zf + 0.008, { cast: false });                 // control strip
+  box(g, std('#0d1612', { roughness: 0.2 }), 0.12, 0.05, 0.016, dx - 0.14, 0.77, zf + 0.009, { cast: false });
+  box(g, std('#7cf0a8', { emissive: '#4fe08a', emissiveIntensity: 0.9 }), 0.08, 0.025, 0.018, dx - 0.14, 0.783, zf + 0.009, { cast: false });   // green display
+  for (const [bx, col] of [[dx + 0.06, '#3cc46a'], [dx + 0.14, '#d64545'], [dx + 0.22, '#e8e8e8']]) {
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.012, 14), std(col, { roughness: 0.35 })); btn.rotation.x = Math.PI / 2; btn.position.set(bx, 0.795, zf + 0.018); g.add(btn);
+  }
+  // the hood (closed) with its lifting handle, sitting on the tank
+  rb(g, steel, dw + 0.02, 0.6, d - 0.02, dx, 0.9, zc, 0.02);
+  box(g, shiny, dw - 0.16, 0.025, 0.03, dx, 1.02, zf + 0.01, { cast: false });
+  for (const s of [-1, 1]) box(g, shiny, 0.025, 0.07, 0.03, dx + s * (dw / 2 - 0.08), 0.98, zf - 0.005, { cast: false });
+  box(g, shiny, dw - 0.06, 0.03, d - 0.08, dx, 1.5, zc, { cast: false });                      // top cap
+  label(g, [{ text: 'DISHWASHER', font: F.round, size: 54, color: '#1d5f5a', y: 0.42, weight: 600 }, { text: '식기세척기 · 85°C rinse', font: F.cute, size: 34, color: '#5b6b6a', y: 0.78 }], 0.44, 0.12, dx, 1.3, zf + 0.002, 0, { px: 512 });
+
+  // ---- landing table on the clean side (on the counter run, x -2.55 … -1.75): racks of clean plates and cups
+  const rackMat = std('#5b7894', { roughness: 0.6 });
+  const rack = (x, y, z) => {
+    box(g, rackMat, 0.46, 0.012, 0.46, x, y, z, { cast: false });
+    for (const s of [-1, 1]) { box(g, rackMat, 0.46, 0.08, 0.012, x, y, z + s * 0.224, { cast: false }); box(g, rackMat, 0.012, 0.08, 0.46, x + s * 0.224, y, z, { cast: false }); }
+  };
+  rack(-2.2, deck + 0.012, zc);
+  const plate = new THREE.CylinderGeometry(0.115, 0.095, 0.012, 24);
+  for (let i = 0; i < 9; i++) { const pl = new THREE.Mesh(plate, plateMat); pl.position.set(-2.38 + i * 0.045, deck + 0.13, zc); pl.rotation.z = Math.PI / 2; g.add(pl); }
+  rack(-2.2, deck + 0.105, zc + 0.02);
+  const cup = new THREE.CylinderGeometry(0.035, 0.03, 0.08, 14);
+  const cupMat = std('#f6f4ef', { roughness: 0.25 });
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) { const c = new THREE.Mesh(cup, cupMat); c.position.set(-2.35 + i * 0.1, deck + 0.157, zc - 0.12 + j * 0.12); c.rotation.x = Math.PI; g.add(c); }
+  // clean plates stacked on the shelf above, ready for the pass
+  for (const x of [-4.3, -3.95, -2.3]) for (let i = 0; i < 9; i++) { const pl = new THREE.Mesh(plate, plateMat); pl.position.set(x, 1.79 + i * 0.014, z1 + 0.24); g.add(pl); }
+  // sign over the station
+  label(g, [{ text: 'DISH WASH', font: F.round, size: 64, color: '#ffffff', y: 0.4, weight: 600 }, { text: '설거지 · غسيل الصحون', font: `${F.cute}, ${F.arabic}`, size: 44, color: '#e8fbf8', y: 0.76 }], 0.62, 0.23, -4.2, 1.45, z1 + 0.012, 0, { bg: '#2f8f8a', border: '#ffffff' });
+}
+
 function cabinetFront(g, M, x0, x1, z, h = 0.86, doorW = 0.75) {
   const dark = std('#3a3f42', { roughness: 0.6 });
   for (let x = x0 + doorW; x < x1 - 0.1; x += doorW) box(g, dark, 0.008, h - 0.14, 0.004, x, 0.1, z, { cast: false });

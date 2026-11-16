@@ -124,6 +124,7 @@ export const SEAT_Y = 0.48;
 export const TABLE_Y = 0.76;
 export const TABLE_EDGE_Z = 0.18;
 const BRAND_TEAL = '#2f8f8a';
+const FOH_GREEN = '#2f4f46';
 const CASHIER_PINK = '#e89bb5';
 const NAME_FONT = '"IBM Plex Sans KR", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif';
 
@@ -1938,8 +1939,9 @@ const UNIFORMS = {
   'head-chef': { apron: '#f4f2ec', apronStyle: 'long', hat: 'toque', hatH: 0.24, logo: false },
   chef: { apron: '#f4f2ec', apronStyle: 'long', hat: 'toque', hatH: 0.17, logo: false },
   cook: { apron: '#2b2b2e', apronStyle: 'long', hat: 'cap', logo: true },
-  server: { apron: BRAND_TEAL, apronStyle: 'short', hat: null, logo: true },
-  cashier: { apron: CASHIER_PINK, apronStyle: 'short', hat: null, logo: true },
+  // front of house: one plain deep-green apron (the booth-cushion green), for servers and cashiers alike
+  server: { apron: FOH_GREEN, apronStyle: 'short', hat: null, logo: true },
+  cashier: { apron: FOH_GREEN, apronStyle: 'short', hat: null, logo: true },
 };
 
 function buildUniform(r, uniform, builtin, name) {

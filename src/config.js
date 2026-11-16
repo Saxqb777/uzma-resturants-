@@ -97,8 +97,8 @@ export const SCENES = [
     id: 'deal', zone: 'out', kicker: 'Special offer',
     title: 'Korean BBQ Meal Deal · AED 59',
     text: 'Spicy chicken BBQ, steamed rice, kimchi, cucumber salad and our signature sauce. Add a polaroid for AED 5.',
-    cam: [-2.0, 0.55, 3.6], look: [-2.6, 0.2, 1.6], fov: 40,
-    dof: 9, focus: 2.0,
+    cam: [-1.95, 0.66, 4.68], look: [-2.8, 0.05, 2.86], fov: 40,
+    dof: 6, focus: 1.9,
     drift: [0.12, 0.02, -0.12],
   },
   {
@@ -115,6 +115,14 @@ export const SCENES = [
     cam: [0, 1.62, -1.2], look: [0, 1.5, -16], fov: 60,
     via: [0.1, 1.45, 2.0],
     drift: [0, 0, -0.6],
+  },
+  {
+    id: 'photospot', zone: 'in', kicker: 'Photo spot',
+    title: 'Strike a Pose',
+    text: 'Our Seoul street mural, with neon and fresh flowers: friends snap a picture together before the grill heats up.',
+    cam: [-3.15, 1.55, -0.85], look: [-6.9, 1.3, -2.75], fov: 56,
+    dof: 4, focus: 4.4,
+    drift: [-0.12, 0.02, -0.1],
   },
   {
     id: 'booths', zone: 'in', kicker: 'Inside',
@@ -166,8 +174,8 @@ export const SCENES = [
   {
     id: 'kitchen', zone: 'in', kicker: 'Back of house', glide: true,
     title: 'The Main Kitchen',
-    text: 'Spotless and bright: everything is prepared on site, from fresh vegetables to marinated chicken.',
-    cam: [4.2, 1.85, -22.2], look: [-3.0, 1.0, -25.0], fov: 66,
+    text: 'Spotless and bright: everything is prepared on site, from fresh vegetables to marinated chicken, and every plate goes through our dish station.',
+    cam: [3.0, 1.85, -22.6], look: [-3.7, 1.0, -26.5], fov: 64,
     via: [-0.2, 1.6, -21.6],
     drift: [0.15, 0, -0.2],
   },
