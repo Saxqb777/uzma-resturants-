@@ -18,13 +18,10 @@ This file is the project's memory. Any new chat should read it first.
 - **Workflow rule:** show visuals before big work. Never make big changes without a final OK from the user.
 
 ## Status
-- **v1 (built, on GitHub branch, NOT deployed yet):**
-  - Preview of all 12 slides: `docs/v1-preview-a.jpg` (1–6), `docs/v1-preview-b.jpg` (7–12).
-  - Deploy only when the user says "deploy".
-- **v0 (live, old version):**
+- **v1 is LIVE** (deployed 2026-11-16, commit `0dc859c`):
   - Public website (Vercel): https://korean-resturant-proj-uni.vercel.app
-  - Private Claude link: https://claude.ai/artifact/7VsVhKtA44W7rnQExD1TKk
-  - Preview: `docs/v0-preview.jpg`
+  - Preview of all 12 slides: `docs/v1-preview-a.jpg` (1–6), `docs/v1-preview-b.jpg` (7–12).
+- **v0 (old):** preview in `docs/v0-preview.jpg`. Private Claude link: https://claude.ai/artifact/7VsVhKtA44W7rnQExD1TKk
 
 ## v1 — client feedback (Nov 15) → decisions
 - **Name:** Seoulicious, English + Arabic سيوليشس on all signs. No Korean shop name.
@@ -150,3 +147,4 @@ Useful links:
   - "Say Kimchi!" polaroid corner next to the polaroid wall.
   - Floor plan: every label visible.
   - Smoother: lighter models, smarter Auto quality.
+- **2026-11-16:** v1 deployed to Vercel (production) on the user's go.
