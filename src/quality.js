@@ -3,6 +3,22 @@
 // below ~48 fps it renders fewer pixels, with spare headroom it goes sharper again. If that is not enough
 // (a slow CPU: too many draw calls, not too many pixels) it turns ambient occlusion off, which halves them.
 const KEY = 'uzma-quality';
+
+// Phones, tablets, built-in laptop graphics (Intel, AMD APUs) and software rendering start lighter:
+// lower resolution and no ambient occlusion. Auto can still raise the resolution, and tries AO once
+// if the frame rate is clearly good.
+function detectWeakGpu(renderer) {
+  try {
+    const gl = renderer.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    const mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Mac/i.test(navigator.platform || ''));
+    const soft = /SwiftShader|llvmpipe|Basic Render|software/i.test(name);
+    const integrated = /Intel|Mali|Adreno|PowerVR|Radeon\(TM\) Graphics|Radeon Vega/i.test(name);
+    const fewCores = (navigator.hardwareConcurrency || 8) <= 4;
+    return { name, weak: mobile || soft || integrated || fewCores };
+  } catch { return { name: '', weak: false }; }
+}
 const MODES = ['auto', 'high', 'low'];
 
 export class Quality {
@@ -18,11 +34,15 @@ export class Quality {
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch { /* storage blocked: use the default */ }
     this.mode = fixedDpr ? 'fixed' : MODES.includes(saved) ? saved : 'auto';
-    this.dpr = Math.min(this.max, 1.5);   // where Auto starts
+    this.gpu = detectWeakGpu(renderer);
+    this.dpr = this.startDpr();   // where Auto starts
     this.ceiling = this.max;
     this.acc = 0; this.frames = 0; this.good = 0; this.hold = 2; this.age = 0;
-    this.aoOff = false;   // Auto dropped ambient occlusion for this session
+    this.aoOff = this.gpu.weak;   // Auto runs without ambient occlusion (weak GPU, or it was too slow)
+    this.aoRetried = false;       // a weak GPU that turns out fast gets one try with AO
   }
+
+  startDpr() { return Math.min(this.max, this.gpu.weak ? 1.0 : 1.5); }
 
   get label() { return { auto: 'Auto', high: 'High', low: 'Low', fixed: 'Fixed' }[this.mode]; }
 
@@ -34,7 +54,7 @@ export class Quality {
   setMode(m) {
     this.mode = m;
     try { localStorage.setItem(KEY, m); } catch { /* not saved, still works */ }
-    if (m === 'auto') { this.dpr = Math.min(this.max, 1.5); this.ceiling = this.max; this.hold = 2; this.aoOff = false; }
+    if (m === 'auto') { this.dpr = this.startDpr(); this.ceiling = this.max; this.hold = 2; this.aoOff = this.gpu.weak; this.aoRetried = false; }
     this.apply();
   }
 
@@ -67,7 +87,7 @@ export class Quality {
     const fps = this.frames / this.acc;
     this.acc = 0; this.frames = 0;
     if (this.hold > 0) { this.hold--; return; }
-    if (fps < 48 && !this.aoOff && (fps < 34 || this.dpr <= 0.9)) {   // very slow, or fewer pixels did not help: drop AO once
+    if (fps < 48 && !this.aoOff && (fps < 34 || this.dpr <= 0.9 || this.aoRetried)) {   // very slow, fewer pixels did not help, or the AO try failed: drop AO
       this.aoOff = true; this.good = 0; this.hold = 2;
       this.apply();
     } else if (fps < 48 && this.dpr > this.min + 0.01) {
@@ -76,7 +96,10 @@ export class Quality {
       this.good = 0; this.hold = 1;
       this.apply();
     } else if (fps >= 57) {
-      if (++this.good >= 3 && this.dpr < this.ceiling - 0.01) {
+      if (this.aoOff && !this.aoRetried && this.good >= 5 && this.dpr >= 0.99) {   // clearly fast: try AO once
+        this.aoOff = false; this.aoRetried = true; this.good = 0; this.hold = 2;
+        this.apply();
+      } else if (++this.good >= 3 && this.dpr < this.ceiling - 0.01) {
         this.dpr = Math.min(this.ceiling, this.dpr * 1.12);
         this.good = 0; this.hold = 1;
         this.apply();

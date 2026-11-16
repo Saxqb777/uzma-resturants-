@@ -145,7 +145,8 @@
   #loader .ko { font-family: var(--f-display); font-size: 68px; color: #ff6f61; line-height: 1; text-shadow: 0 0 34px rgba(255, 79, 139, .5); }
   #loader .en { font-family: var(--f-mono); letter-spacing: .3em; font-size: 12px; color: var(--muted); }
   #loader .bar { width: 220px; height: 3px; background: rgba(241,231,212,.15); border-radius: 2px; overflow: hidden; }
-  #loader .bar i { display: block; height: 100%; width: 0; background: var(--bulb); transition: width .3s ease; }
+  #loader .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--bulb) 0%, #fff6dc 50%, var(--bulb) 100%); background-size: 200% 100%; transition: width .3s ease; animation: loadShimmer 1.4s linear infinite; }
+  @keyframes loadShimmer { from { background-position: 200% 0; } to { background-position: 0 0; } }
   #loader .msg { font-size: 13px; color: var(--muted); min-height: 1.4em; }
   #loader button { margin-top: 6px; padding: 12px 22px; font-size: 14px; }
 
@@ -160,6 +161,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .caption, .ui, #loader, .hint { transition: none; }
+    #loader .bar i { animation: none; }
   }
 </style>
 </head>

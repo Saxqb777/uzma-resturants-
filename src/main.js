@@ -30,10 +30,12 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 const params = new URLSearchParams(location.search);
 
 const loadBar = $('loadBar'), loadMsg = $('loadMsg');
+// Update the loading bar and give the browser a moment to paint and handle input.
+// (A timer races the animation frame: background tabs get no frames, and loading must not stop there.)
 const step = async (pct, msg) => {
-  loadBar.style.width = `${pct}%`;
+  if (pct != null) loadBar.style.width = `${pct}%`;
   if (msg) loadMsg.textContent = msg;
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+  await new Promise((r) => { let done = false; const go = () => { if (!done) { done = true; r(); } }; requestAnimationFrame(() => setTimeout(go, 0)); setTimeout(go, 60); });
 };
 
 // ------------------------------------------------------------ renderer
@@ -222,40 +224,81 @@ async function build() {
   await refreshSignFonts(6000);
   await step(85, 'Opening the doors…');
   zones.tag();
-  await preload();
-  renderer.shadowMap.needsUpdate = true;
+  await preload();   // (it also draws the shadows, once: the room is static)
 }
 
-// Do all the GPU set-up now, behind the loading screen, so the tour never stutters
-// the first time a new area comes into view.
+// Do all the GPU set-up now, behind the loading screen, so the tour never stutters the first time a new
+// area comes into view. It runs in small slices with breaks in between, and shaders compile in the
+// background (in parallel where the browser can): the page never freezes. (One big block used to make
+// Chrome/Edge on Windows, which prepare shaders slowly, show "Page unresponsive".)
 async function preload() {
+  // Wait until the graphics chip has really finished the queued work, without freezing the page
+  // (a fence we poll between short breaks; the browser keeps working in the background).
+  const gl = renderer.getContext();
+  const gpuDone = async (pct, msg) => {
+    if (!gl.fenceSync) return;
+    const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+    gl.flush();
+    await step(pct, msg);
+    while (gl.getSyncParameter(sync, gl.SYNC_STATUS) !== gl.SIGNALED) await step(null);
+    gl.deleteSync(sync);
+  };
+  let t0 = performance.now();
+  const breathe = async (pct, msg) => { if (performance.now() - t0 > 150 || msg) { await step(pct, msg); t0 = performance.now(); } };   // short breaks, not too many
   // 1) upload every texture
-  const seen = new Set();
-  const upload = (v) => { if (v && v.isTexture && !seen.has(v)) { seen.add(v); renderer.initTexture(v); } };
-  scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const k of Object.keys(m)) upload(m[k]); });
-  upload(scene.background);
-  await step(90);
-  // 2) compile shaders for each lighting combination, as they are drawn (into the post-processing target)
-  renderer.setRenderTarget(composer.readBuffer);
-  for (const z of ['in', 'out', 'all']) { zones.force(z); renderer.compile(scene, camera); }
-  renderer.setRenderTarget(null);
-  await step(95);
-  // 3) draw every tour shot once (with that spot's lighting) into a tiny target,
-  //    so geometry is uploaded and every shader has actually been used once
+  const textures = new Set();
+  const add = (v) => { if (v && v.isTexture) textures.add(v); };
+  scene.traverse((o) => { for (const m of [].concat(o.material || [])) for (const k of Object.keys(m)) add(m[k]); });
+  add(scene.background);
+  let i = 0;
+  for (const t of textures) { renderer.initTexture(t); await breathe(85 + 3 * (++i / textures.size)); }
+  await gpuDone(88);
+  // 2) compile the shaders for each lighting combination (into the post-processing target, like the real frames)
+  const parts = [['out', 'Preparing the street…'], ['in', 'Preparing the dining room…'], ['all', 'Preparing the kitchen…']];
+  const parallel = renderer.extensions.has('KHR_parallel_shader_compile');
+  for (const [k, [z, msg]] of parts.entries()) {
+    await step(89 + k * 2, msg);
+    zones.force(z);
+    renderer.setRenderTarget(composer.readBuffer);
+    const mats = renderer.compile(scene, camera);           // only queues the work, returns at once
+    renderer.setRenderTarget(null);
+    const programs = new Set();
+    for (const m of mats) { const pr = renderer.properties.get(m).currentProgram; if (pr) programs.add(pr); }
+    // with parallel compiling, wait without blocking until the browser is done
+    if (parallel) while ([...programs].some((pr) => !pr.isReady())) await step(null);
+    // then finish each program, a few at a time (without parallel compiling, this is where the work happens)
+    let n = 0;
+    for (const pr of programs) { pr.getUniforms(); await breathe(89 + k * 2 + 2 * (++n / programs.size)); }
+  }
+  // 3) draw every tour shot once (with that spot's lighting) into a tiny target, one shot per slice,
+  //    so geometry is uploaded and every shader has really been used. The shadows are drawn first, once.
   const tmp = new THREE.WebGLRenderTarget(64, 36, { type: THREE.HalfFloatType });
+  zones.force('all');   // every shadow-casting light on, so every shadow map is drawn
+  renderer.shadowMap.needsUpdate = true;
   renderer.setRenderTarget(tmp);
-  for (const s of SCENES) {
+  renderer.render(scene, camera);
+  renderer.setRenderTarget(null);
+  await gpuDone(95, 'Drawing the shadows…');
+  for (const [k, s] of SCENES.entries()) {
+    await step(95 + 4 * (k / SCENES.length), `Final touches… ${k + 1}/${SCENES.length}`);
+    renderer.setRenderTarget(tmp);
     director.snapTo(s);
     roof.visible = !s.cutaway;
     for (const z of ['all', zones.zoneOf(camera.position)]) { zones.force(z); renderer.render(scene, camera); }
+    renderer.setRenderTarget(null);
   }
-  renderer.setRenderTarget(null);
   tmp.dispose();
   roof.visible = true;
   zones.force('all');
-  // 4) one frame through the whole effect chain, so the ambient-occlusion and bloom shaders are ready too
+  // 4) one frame through the whole effect chain with every effect on (even ones the current quality
+  //    setting leaves off), so ambient occlusion, depth of field and bloom never compile mid-tour
+  await gpuDone(99, 'Almost there…');
   director.snapTo(SCENES[0]);
+  const was = [ao.enabled, dof.enabled, bloom.enabled];
+  ao.enabled = dof.enabled = bloom.enabled = true;
   composer.render();
+  [ao.enabled, dof.enabled, bloom.enabled] = was;
+  await gpuDone(99);
 }
 
 // ------------------------------------------------------------ tour + look-around

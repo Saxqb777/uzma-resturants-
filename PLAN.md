@@ -109,7 +109,11 @@ This file is the project's memory. Any new chat should read it first.
   - Street: street lights + the front-window interior lights.
   - Inside: interior lights only.
   - Floor plan: all lights.
-- **Preloading:** textures, shaders for each lighting area, and a warm-up draw of every scene all happen on the loading screen, so nothing stutters the first time.
+- **Preloading:** textures, shaders for each lighting area, shadows and a warm-up draw of every scene all happen on the loading screen, so nothing stutters the first time.
+  - It runs in small steps with breaks, waiting for the graphics chip without blocking. This fixed "Page unresponsive" (seen on a 2025 iPad, Nov 16).
+  - The bar keeps moving with messages ("Preparing the street…", "Drawing the shadows…", "Final touches 3/12").
+  - Loading also keeps going if the tab is in the background.
+- **Lighter start** on iPads/phones and built-in laptop graphics: Auto starts at a lower resolution without ambient occlusion, then steps up if fast.
 - **Lighter models:** simpler bottles, bowls and bulbs (225K → 140K triangles). The outside's static parts are merged.
 - **Result:** same resolution, about half the frame time (measured in a software renderer).
 
@@ -148,3 +152,4 @@ Useful links:
   - Floor plan: every label visible.
   - Smoother: lighter models, smarter Auto quality.
 - **2026-11-16:** v1 deployed to Vercel (production) on the user's go.
+- **2026-11-16:** loading fix: no more "Page unresponsive" (sliced, non-blocking preparation), lighter start on iPad/phones/integrated graphics. Deployed.
